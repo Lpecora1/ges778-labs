@@ -10,19 +10,20 @@ If you need a reference for writing functions, take a look at [this chapter](htt
 Think about what you need in order to leave the house for work or school. What things do you need to get out the door—some variation on "phone, wallet, keys"? Think about what influences your list, e.g. maybe you switch modes of transportation, which will decide whether you need car keys, a bike helmet and lights, or money on CharmPass. Fill those in here:
 
 **Things you _always_ need:**
+#phone, wallet, keys
 
 - 
 
 **Things you _sometimes_ need**, including what determines whether you need each thing:
-
+#if sunny need sunglasses, if rainy need raincoat
 -
 
 Write it out as pseudocode here, filling in the blanks and adding more fake code:
 
 ``` 
 function leaving_the_house {
-    always_need ___
-    if ___ then bring ___
+    always_need "phone,wallet, and keys"
+    if "rainy" then bring "raincoat"
     otherwise ___
     
 }
@@ -32,18 +33,57 @@ From your pseudocode, decide on your arguments and write out a working R functio
 
 ```{r}
 #| label: leaving-the-house-definition
-leaving_the_house <- function() {}
+leaving_the_house <- function(weather) {print("Need phone, wallet, and keys")
+  if (weather== "rainy") {
+    print("Also, need rain jacket")}
+  if (weather== "sunny") {
+    print("Also need sunglasses")
+  }
+}
+
+#looked up how to combine messages into single print, ended up using if and paste
+#final function is below
+
+leaving_the_house <- function(weather,day) {
+  x<-"Need phone, wallet, and keys."
+    if (weather== "rainy") {
+      x <- paste(x, "Also need raincoat.")
+      }
+    if (weather== "sunny") {
+      x <- paste(x,"Also need sunglasses.")
+      }
+    if (day== "weekday") {
+      x <- paste(x, "Need backpack too.")
+     }
+    if (day== "weekend") {
+      x<- paste(x, "Don't need backpack.")
+      }
+  return(x)
+    }
 ```
 
+    
+
+leaving_the_house("rainy")
+
+leaving_the_house("sunny")
+
+leaving_the_house("rainy","weekday")
+
+leaving_the_house("sunny","weekday")
+
+leaving_the_house("rainy","weekend")
+
+leaving_the_house("sunny","weekend")
 
 Then call your function a few times with different arguments. Start with ones that match what you did today, then try it with what you'll need to do tomorrow.
 
 ```{r}
 #| label: leaving-the-house-calls 
-today <- leaving_the_house()
+today <- leaving_the_house("sunny","weekday")
 today
 
-tomorrow <- leaving_the_house()
+tomorrow <- leaving_the_house("rainy","weekend")
 tomorrow
 ```
 
