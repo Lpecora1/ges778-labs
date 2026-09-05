@@ -68,6 +68,8 @@ leaving_the_house("rainy")
 
 leaving_the_house("sunny")
 
+leaving_the_house()
+
 leaving_the_house("rainy","weekday")
 
 leaving_the_house("sunny","weekday")
@@ -196,13 +198,28 @@ comma_vals <- c(2345, 10123.4, 999, 1205) # want 2,345; 10,123; 999; 1,205
 ```{r}
 #| label: fmt-functions-1
 # define functions here
-percent1 <- function(x) {}
+percent1 <- function(x) {
+  y<-
+    round(x,digits = 2)
+  z<-y*100
+  paste0(z,sep="%",collapse = ", ")
+}
 percent1(percent_vals)
 
-dollar1 <- function(x) {}
+dollar1 <- function(x) {
+  y<-
+    round(x)
+  z<-formatC(y,big.mark = ",")
+  paste0("$",z,collapse = "; ")
+}
 dollar1(dollar_vals)
 
-comma1 <- function(x) {}
+comma1 <- function(x) {
+  y<-
+    round(x)
+  z<-formatC(y,big.mark = ",", format = "f", digits = 0)
+  paste0(z,collapse = "; ")
+}
 comma1(comma_vals)
 ```
 
@@ -226,6 +243,16 @@ Define another set of functions, now using `scales::label_percent`, `scales::lab
 #| label: scales-example 
 decimal <- scales::label_number(accuracy = 0.01)
 decimal(c(1.234, 5.1, 10.999))
+
+pct<- scales::label_percent()
+pct(c(0.59,0.02,0.96,0.123,0.005))
+pct(c(0.05, 0.1, 0.512, 0.678))
+
+currency<- scales::label_currency()
+currency(c(100, 110.70, 823, 1123))
+
+comma<- scales::label_comma()
+comma(c(2345, 10123.4, 999, 1205))
 ```
 
 ## 4. Finishing up
