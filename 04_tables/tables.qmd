@@ -1,0 +1,27 @@
+---
+title: Tables
+format: gfm
+---
+
+This will be a very quick lab where you just practice formatting your data and making a table of it. Not much that isn't already in the notes.
+
+- Use the ACS data, filtered for the US, Maryland, and a few counties of your choice. 
+- Choose a few columns you're interested in, and select those (plus location). 
+- Use more than one type of numeric variable (choose a mix of percentages, integers, and/or dollar amounts).
+- Define the formatter functions you'll need, and use them to format each variable as appropriate.
+- Create a table using `knitr::kable`.
+- Give your columns clean, readable names.
+- Align the columns so text columns are aligned on the left, numeric ones on the right.
+- Give the table a title using the `caption` argument of `kable`.
+
+
+```{r}
+#| label: setup
+ 
+```
+
+
+```{r}
+#| label: table-with-kable
+ 
+```
