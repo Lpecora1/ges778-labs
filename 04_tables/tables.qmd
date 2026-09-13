@@ -17,11 +17,53 @@ This will be a very quick lab where you just practice formatting your data and m
 
 ```{r}
 #| label: setup
+
+library(ggplot2)
+
+acs_table <- justviz::acs |>
+    dplyr::filter(
+        name %in%
+            c(
+                "United States",
+                "Maryland",
+                "Washington County",
+                "Baltimore County",
+                "Frederick County",
+                "Garrett County"
+            )
+    ) |>
+    dplyr::select(level, name, foreign_born, median_hh_income, diversity_idx, bachelors)
+
+acs_table
  
 ```
 
 
 ```{r}
 #| label: table-with-kable
+
+comma <- scales::label_comma(accuracy = 1) # round to nearest whole number
+percent <- scales::label_percent(accuracy = 1)
+dollar <- scales::label_currency(accuracy = 1)
+
+acs_table_fmt <- acs_table |>
+    dplyr::mutate(foreign_born = percent(foreign_born)) |>
+    dplyr::mutate(bachelors = percent(bachelors)) |>
+    dplyr::mutate(median_hh_income = dollar(median_hh_income)) |>
+    dplyr::mutate(diversity_idx = percent(diversity_idx))
  
+knitr::kable(
+    acs_table_fmt,
+    align = "llrrrr",
+    col.names = c(
+        "Level",
+        "Name",
+        "Foreign born",
+        "Median household income",
+        "Diversity index",
+        "Bachelors deg"
+    ),
+    caption = "Socioeconomic indicators, western MD counties, 2024"
+)
+
 ```

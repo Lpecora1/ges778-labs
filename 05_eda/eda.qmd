@@ -9,15 +9,28 @@ For this lab, you'll do some EDV with the ACS data, taking similar steps to what
 #| label: setup
 library(ggplot2)
 
+#wanted to look at columns to pick
+justviz::acs
+
 acs_tracts <- justviz::acs |>
     dplyr::filter(level == "tract") |>
-    dplyr::select(county, name, NULL) # replace NULL with the columns you want to use
+    dplyr::select(county, name, poverty,foreign_born, no_vehicle_hh, homeownership, bachelors, median_hh_income) # replace NULL with the columns you want to use
+
+acs_tracts
 ```
 
 Look at the first few rows of data, and print a summary. Jot down anything that seems noteworthy---missing values, very high or low values, etc.
 
 ```{r}
 #| label: summary
+head(acs_tracts)
+summary(acs_tracts)
+
+#Notes:
+#High amount (8) of NA's for median_hh_income, probably still good to use.
+#Max income is 250,001 per Census privacy policy, important to note when looking at distribution
+#Poverty, foreign_born, and no_vehicle_hh have some interesting high maxs/outliers that are much greater than the 75th percentile. The minimum does not seem to be an outlier
+#Poverty, no_vehicle_hh, and homeownership all have 4 NA's, I wonder if these are the same 4 tracts, perhaps there are no housing units or permanent population in these tracts
  
 ```
 
@@ -27,7 +40,85 @@ For each numeric variable in your data, make a histogram. Adjust the number of b
 
 ```{r}
 #| label: histograms
- 
+update_geom_defaults("histogram", list(color = "white"))
+
+##poverty##
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 50)
+
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 100)
+
+#trying to remove outliers from hsitogram
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 100) +
+    scale_x_continuous(limits = c(NA, .5))
+
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 50) +
+    scale_x_continuous(limits = c(NA, .5))
+
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 25) +
+    scale_x_continuous(limits = c(NA, .5))
+
+#50 bins with outliers removed looks good for poverty, keeping detail but not too noisy
+
+#Poverty distribution notes:highly skewed to the right (also where outliers are, most of the tracts are below 20% poverty)
+
+##foreign_born##
+ggplot(acs_tracts, aes(x = foreign_born)) +
+    geom_histogram(bins = 50)
+ggplot(acs_tracts, aes(x = foreign_born)) +
+    geom_histogram(bins = 100)
+ggplot(acs_tracts, aes(x = foreign_born)) +
+    geom_histogram(bins = 25)
+ggplot(acs_tracts, aes(x = foreign_born)) +
+    geom_histogram(bins = 500)
+#25 bins looks good
+
+#foreign_born distribution notes:right skew, most tracts have low value, some outliers with foreign born (likely concentration of immigrants in communities together)
+
+##no_vehicle_hh##
+ggplot(acs_tracts, aes(x = no_vehicle_hh)) +
+    geom_histogram(bins = 50)
+ggplot(acs_tracts, aes(x = no_vehicle_hh)) +
+    geom_histogram(bins = 25)
+ggplot(acs_tracts, aes(x = no_vehicle_hh)) +
+    geom_histogram(bins = 5)
+#like 25 bins
+
+#no_vehicle_hh distribution notes: right skew,a few outliers of high value, most tracts have low value, data pretty concentrated in low values
+
+##homeownership##
+ggplot(acs_tracts, aes(x = homeownership)) +
+    geom_histogram(bins = 50)
+ggplot(acs_tracts, aes(x = homeownership)) +
+    geom_histogram(bins = 25)
+ggplot(acs_tracts, aes(x = homeownership)) +
+    geom_histogram(bins = 5)
+ggplot(acs_tracts, aes(x = homeownership)) +
+    geom_histogram(bins = 100)
+#25 bins looks good again
+#homeownership distribution notes:left skewed (different than previous data)
+
+##bachelors##
+ggplot(acs_tracts, aes(x = bachelors)) +
+    geom_histogram(bins = 50)
+ggplot(acs_tracts, aes(x = bachelors)) +
+    geom_histogram(bins = 25)
+ggplot(acs_tracts, aes(x = bachelors)) +
+    geom_histogram(bins = 100)
+#25 seems to be consistently a good bin count for this dataset
+#bachelors distribution notes:this data closer to a normal distribution than others but this is focused on the low end of %bachelors (maxs out just above a 50% outlier,a little over 20% is mode)Seems in general bachelors is low with a few high outliers)
+
+##median_hh_income##
+ ggplot(acs_tracts, aes(x = median_hh_income)) +
+    geom_histogram(bins = 25)
+ ggplot(acs_tracts, aes(x = median_hh_income)) +
+    geom_histogram(bins = 50)
+ # I like 50 bins for this one, see some of the detail in variation
+ #median_hh_income distribution notes:fairly normally distributed, slight right skew, can see out of place high count bin at 250k, representing that Census privacy policy that maxs income reporting there
 ```
 
 ## Unusual values
@@ -36,6 +127,12 @@ For one of your variables with a heavy skew or some extreme values, filter the d
 
 ```{r}
 #| label: extremes
+
+ggplot(acs_tracts, aes(x = poverty)) +
+    geom_histogram(bins = 50) +
+    scale_x_continuous(limits = c(NA, .5))
+
+#By removing the outliers by limiting the right side of the x axis, you can see more detail in the part of the distribution where the majority of the data is. For example you can see that the right tail is very stretched out and there are a few fairly big differences between adjacent bins along the right slope of the distribution.
  
 ```
 
@@ -46,6 +143,11 @@ Next, choose one of your numeric variables and make a series of boxplots of it b
 
 ```{r}
 #| label: boxplots
+
+ggplot(acs_tracts,aes(x=poverty,y=county))+
+  geom_boxplot()
+
+#You can see that Baltimore City has substantially more variation in poverty in its tracts than elsewhere in the state with some outliers of high poverty. Considering all counties, there are only 5 outlier tracts with poverty over 50%. These outliers were not visible individually in the histogram and are responsible for much of the skew. There are also some counties with very little variation like Somerset co. Also, most of the tracts fall below 25% poverty.
  
 ```
 
@@ -53,26 +155,48 @@ Pick a variable you want to investigate; pretend you're going to build a model t
 
 ```{r}
 #| label: scatter-1
+
+ggplot(acs_tracts, aes(x = poverty, y = homeownership)) +
+    geom_point()
+
+ggplot(acs_tracts, aes(x = poverty, y = homeownership)) +
+    geom_point(alpha = 0.2)
+
+#negative trend
  
 ```
 
 ```{r}
 #| label: scatter-2
- 
+
+ggplot(acs_tracts, aes(x = foreign_born, y = homeownership)) +
+    geom_point(alpha = 0.2)
+
+#negative trend but is not very tight
+
 ```
 
 ```{r}
 #| label: scatter-3
- 
+
+ggplot(acs_tracts, aes(x = bachelors, y = homeownership)) +
+    geom_point(alpha = 0.2)
+
+#no trend
+
 ```
 
 Now pick one of those independent variables that you think could potentially be used in a linear regression model. On your scatterplot, add a regression line with `geom_smooth(method = lm)` (see [the docs](https://ggplot2.tidyverse.org/reference/geom_smooth.html))
 
 ```{r}
 #| label: scatter-lm
+
+ggplot(acs_tracts, aes(x = poverty, y = homeownership)) +
+    geom_point(alpha = 0.2)+
+    geom_smooth(color="red")
  
 ```
 
 What does the regression line tell you?
 
-
+#The regression line tells me that there is a general negative relationship between homeownership and poverty in Maryland tracts (homeownership decreases as poverty increases). The residuals of this trend are smallest when poverty is low and homeownership is high but residuals increases as you move right on the figure.
