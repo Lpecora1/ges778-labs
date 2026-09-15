@@ -1,0 +1,70 @@
+---
+title: Batch generating charts
+format: gfm
+---
+
+Feel free to ignore this!
+
+By Keaton's request, here are notes on batch generating lots of charts. My usual method is reshape, split, apply: reshape the data into a long format, split into groups (variable, etc), apply a function to each group.
+
+
+```{r}
+#| label: setup
+library(ggplot2)
+
+acs_split <- justviz::acs |>
+    dplyr::filter(level == "tract") |>
+    # reshape, making indicator column a factor
+    tidyr::pivot_longer(
+        -level:-name,
+        names_to = "indicator",
+        names_ptypes = factor()
+    ) |>
+    # split into a list of data frames based on indicator
+    split(~indicator)
+
+# varify that this is a list, that each list item is a data frame,
+# and check the length
+class(acs_split)
+class(acs_split[[1]])
+length(acs_split)
+```
+
+A batch list of 38 histograms
+
+```{r}
+#| label: batch-charts
+# map_* functions map over a list to apply a function
+# imap means it takes 2 arguments, the list item & its index
+# because it's split by a factor, the index is factor levels
+purrr::imap(acs_split, function(df, id) {
+    ggplot(df, aes(x = value)) +
+        geom_histogram(bins = 50) +
+        labs(title = stringr::str_glue("ACS data: {id} by tract"))
+})
+```
+
+In base R, you could instead take a vector of column names for the columns you want to plot, then iterate over that with `lapply` (kind of the base equivalent of `purrr::map`). `hist` just needs a vector instead of a whole data frame, so you can subset the data frame for just the vector of interest and plot it.
+
+```{r}
+#| label: base-r
+# get the names of columns other than the ones for geography
+# other ways to do this
+cols <- names(justviz::acs)[
+    names(justviz::acs) %notin% c("level", "name", "county")
+]
+
+# alternatives:
+# select columns programmatically by data type
+# names(justviz::acs)[unlist(lapply(justviz::acs, is.numeric))]
+# drop columns by index
+# names(justviz::acs)[-1:-3]
+
+# assign back to a variable just to avoid printing a bunch of NULLs
+plots <- lapply(cols, function(col) {
+    # extract column as a vector for rows where level == tract
+    col_data <- justviz::acs[[col]][justviz::acs$level == "tract"]
+    hist(col_data, main = col)
+})
+```
+

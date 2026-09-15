@@ -1,0 +1,38 @@
+---
+title: Annotations
+format: gfm
+---
+
+## Historic context
+
+Working again with the unemployment data, filter for just one location. Make a line chart like you've done already, then add annotations that provide context. You decide what you want to show and how you want to show it, but some ideas could be:
+
+* Recession periods
+* Presidential administrations
+* COVID lockdown era
+* High and low points
+
+I already made a dataset of the same recessions FRED uses; you can get it with `readRDS("recession_dates.rds")` if you want to work with it. If there's some other data you want to use and want help finding and reading it into a data frame, let me know.
+
+
+```{r}
+#| label: context
+library(ggplot2)
+#
+```
+
+## Distributions pt 2
+
+Revisit the two variables you worked with at the end of Lab 6. Make a scatterplot of the two variables, and add annotations. Some things to try: 
+
+* Highlight certain areas or certain groups of points (geographic regions, values above / below some meaningful threshold, outliers). 
+* Add lines to show averages or other benchmarks. 
+* Add a regression line (`geom_abline` or `geom_smooth` with some arguments set) if it's appropriate for the data. 
+* Try showing the distributions of each variable independently (check out `geom_rug`)
+
+Don't necessarily throw everything into one plot because it will be hard to read. Make lots of plots to see what works together.
+
+```{r}
+#| label: scatterplots
+ 
+```

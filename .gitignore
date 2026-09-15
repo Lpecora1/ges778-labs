@@ -6,3 +6,5 @@
 renv/library
 .vscode
 
+*.Rproj
+_*.R
