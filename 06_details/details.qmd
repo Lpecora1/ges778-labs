@@ -16,12 +16,32 @@ unemp_since_2020 <- justviz::unemployment |>
     dplyr::filter(lubridate::year(date) >= 2020)
 
 county_unemp <- unemp_since_2020 |>
-    dplyr::filter() # fill in name == "Baltimore County", etc
+    dplyr::filter(name=="Harford County") # fill in name == "Baltimore County", etc
+
+summary(county_unemp)
+
+ggplot(county_unemp, aes(x =date, y=rate )) +
+    geom_line()
 ```
 
 
 ```{r}
 #| label: misleading-unemployment
+
+county_unemp_new <- county_unemp |>
+  dplyr::filter(date <= as.Date("2020-04-01"))
+
+ggplot(county_unemp_new, aes(x = date, y = rate)) +
+  geom_line(colour = "red", linewidth = 3, arrow =grid::arrow(
+      type = "closed",
+      length = unit(0.2, "inches") )) +
+  scale_x_date(
+    limits = as.Date(c("2020-01-01", "2020-04-01")))+
+  labs(title = "Harford Co. Unemployment SKYROCKETS Under Incumbent",
+       x="Time",y="Unemployment")+
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank())
  
 ```
 
@@ -43,6 +63,23 @@ General idea you're going for is like this:
 ```{r}
 #| label: unemployment-gap
 
+unemp_since_2025 <- justviz::unemployment |>
+    dplyr::filter(lubridate::year(date) >= 2025)
+
+county_unemp_2025 <- unemp_since_2025 |>
+    dplyr::filter(name=="Baltimore County")
+
+
+gap_data <- county_unemp_2025 |>
+  dplyr::filter(
+    date %in% c(
+      max(date[date < as.Date("2025-10-01")]),
+      min(date[date > as.Date("2025-10-01")])))
+
+ggplot(county_unemp_2025, aes(x = date, y = rate)) +
+  geom_line() +
+  geom_line(data = gap_data,linetype = "dashed")
+
 ```
 
 ## Distributions vs summaries
@@ -51,6 +88,37 @@ Pick 2 variables from the ACS data. Filter for just tracts within 5-7 counties (
 
 ```{r}
 #| label: distributions
+
+acs_tracts <- justviz::acs |>
+    dplyr::filter(level == "tract") |>
+    dplyr::filter(county %in% c("Baltimore County", "Harford County","Carroll County","Howard County","Anne Arundel County"))|>
+    dplyr::select(poverty,no_vehicle_hh,county)
+
+ggplot(data = acs_tracts,aes(x = county, y = no_vehicle_hh))+
+  geom_boxplot()
+
+ggplot(data = acs_tracts,aes(x = county, y = poverty))+
+  geom_boxplot()
+
+ggplot(data = acs_tracts,aes(y = no_vehicle_hh))+
+  geom_density()
+
+ggplot(data = acs_tracts,aes(y = poverty))+
+  geom_density()
+
+ggplot(data = acs_tracts,aes(x=poverty,y = no_vehicle_hh))+
+  geom_point()
+
+summary(acs_tracts)
+
+
+ggplot(data = acs_tracts,aes(y=poverty,ymin=0, ymax=0.86, x=county))+
+  geom_linerange()+
+  geom_point()
+
+ggplot(data = acs_tracts,aes(y=no_vehicle_hh,ymin=0, ymax=0.45, x=county))+
+  geom_linerange()+
+  geom_point()
  
 ```
 
