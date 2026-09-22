@@ -18,6 +18,49 @@ I already made a dataset of the same recessions FRED uses; you can get it with `
 ```{r}
 #| label: context
 library(ggplot2)
+unemp_since_2020 <- justviz::unemployment |>
+    dplyr::filter(lubridate::year(date) >= 2020)
+
+MD_unemp <- unemp_since_2020 |>
+    dplyr::filter(name=="Maryland") # fill in name == "Baltimore County", etc
+
+summary(MD_unemp)
+
+gap_data <- MD_unemp |>
+  dplyr::filter(
+    date %in% c(
+      max(date[date < as.Date("2025-10-01")]),
+      min(date[date > as.Date("2025-10-01")])))
+
+#define peak unemployment
+peak_unemp <- MD_unemp |>
+  dplyr::filter(rate == max(rate, na.rm = TRUE))
+
+#define lowest unemployment
+min_unemp <- MD_unemp |>
+  dplyr::filter(rate == min(rate, na.rm = TRUE))
+
+#define COVID lockdown, had to look up how to get this down to just 2 dates
+lockdown_era <- data.frame(
+  begin = as.Date("2020-03-05"),
+  finish = as.Date("2021-07-01"))
+
+ggplot(MD_unemp, aes(x = date, y = rate)) +
+  geom_line(linewidth = 1) +
+  geom_line(data = gap_data, linetype = "dashed",linewidth = 1,colour="red") +
+  geom_point(data = peak_unemp,size = 4) +
+  geom_text(data = peak_unemp,aes(label = paste0("Peak=",rate, "%")))+
+  geom_point(data = min_unemp,size = 4) +
+  geom_text(data = min_unemp,aes(label = paste0("Lowest=",rate, "%")))+
+  geom_rect( aes(xmin = begin, xmax = finish, ymin = -Inf, ymax = Inf),
+        data = lockdown_era,
+        inherit.aes = FALSE,
+        alpha = 0.3,
+        fill = "red")+
+  annotate("text",x = as.Date("2020-11-01"),y = 0.02,label = "MD COVID-19 Lockdown",vjust = 1.5)+
+  labs(title = "Unemployment in MD and the COVID-19 Pandemic",x="Year",y="Unemployment Rate")
+
+#need to clean up point label locations
 #
 ```
 
@@ -34,5 +77,63 @@ Don't necessarily throw everything into one plot because it will be hard to read
 
 ```{r}
 #| label: scatterplots
+
+acs_tracts <- justviz::acs |>
+    dplyr::filter(level == "tract") |>
+    dplyr::filter(county %in% c("Baltimore County", "Harford County","Carroll County","Howard County","Anne Arundel County"))|>
+    dplyr::select(poverty,no_vehicle_hh,county)
+
+acs_tracts2 <- acs_tracts |>dplyr::mutate(
+        is_balt_county = ifelse(
+            county == "Baltimore County",
+            "Baltimore County tracts",
+            "Other tracts"
+        )
+    ) |>
+    # make it a factor with focus area first
+    dplyr::mutate(
+        is_balt_county = as.factor(is_balt_county) |>
+            forcats::fct_relevel("Baltimore County tracts")
+    )
+
+md_avg <- justviz::acs |>
+    dplyr::filter(level == "state")
+
+#Final Plot
+ggplot(data = acs_tracts2,aes(x=poverty,y = no_vehicle_hh, colour=is_balt_county))+
+  geom_abline(color="black")+
+   geom_point() +
+    scale_color_manual(
+        values = c(
+            "Baltimore County tracts" = "pink",
+            "Other tracts" = "gray70"
+        )
+    )+
+  labs(title = "Lack of Household Vehicle vs. Poverty in Baltimore Suburb Counties, 2024", y="Rate of Households Lacking a Vehicle", x="Poverty Rate",subtitle = "Statewide rates shown as dashed line (green= poverty, blue= rate of households lacking a vehicle)")+
+  geom_hline(
+        aes(yintercept = no_vehicle_hh),
+        data = md_avg,
+        linetype = "dashed", colour="blue"
+    )+
+  geom_vline(
+        aes(xintercept = poverty),
+        data = md_avg,
+        linetype = "dashed",colour="green4"
+    )
+
+#Test plots
+
+ggplot(data = acs_tracts2,aes(x=poverty,y = no_vehicle_hh, colour=is_balt_county))+
+  geom_abline(color="black")+
+   geom_point() +
+    scale_color_manual(
+        values = c(
+            "Baltimore County tracts" = "pink",
+            "Other tracts" = "gray70"
+        )
+    )
+
+ggplot(data = acs_tracts2,aes(x=poverty,y = no_vehicle_hh))+
+  geom_rug()
  
 ```
