@@ -27,20 +27,45 @@ and so on.
 
 Try each set on at least 2 backgrounds. Take note of what difficulties you have, how you see colors shift depending on their neighbors, and which background is easiest.
 
+#Notes-Pastels2
+#light purple appears darker and stronger when next to orange compared to being next to darker purple
+#pink seems more associated with purple when next to lighter purple
+#the lightest blue appears strangely similar to the light green when next each other but the difference between green and blue is starker when the dark blue is adjacent
+#orange appears most closely related to pink but pink more closely related to purples
+#pastel colors pop more on the black background, especially the greens and orange
+
+#Notes-blues
+#some of the blues appear very similar to each other on the white background
+#can see how one blue is slightly more green than the other that is very similar whenit is adjacent to an even greener blue, differences more clear in the gradient
+#the greenest blue and bluest blue appear very different from each other when adjacent
+#difficulty distinguishing similar blues when more extreme (green vs not green) swatches are not adjacent
+#blues are harder to distinguish differences when on black background
+
 ### Qualitative colors
 
 There are 2 types of shapes in the qualitative sets; start with the bars, not the lines. You're designing charts for a client, and these colors fit their branding palette, so you're stuck with them. You have a chart with 5 groups, so pick 5 colors. 
 
-* Chart 1: Lay out the bar pieces touching side by side to simulate bar charts. If two neighboring bars are too similar, shuffle them around until they're more distinct. 
+* Chart 1: Lay out the bar pieces touching side by side to simulate bar charts. If two neighboring bars are too similar, shuffle them around until they're more distinct.
+
+#some of the blues are very simliar and hard to distinguish when adjacent
+
 * Chart 2: Move the bars apart slightly so there's a gap in between them. Does this make any pairs of colors easier to tell apart?
-* Chart 3: Move the pieces around to simulate stacked bars. Again, shuffle pieces if you need to to keep them distinct. 
+
+#gap makes similar blues (the darker, more purple ones) easier to tell apart
+
+* Chart 3: Move the pieces around to simulate stacked bars. Again, shuffle pieces if you need to to keep them distinct.
+
+#having 5 colors honestly is a lot going on visually
+
 * Chart 4: Using the skinny strips in the same 5 colors you chose, simulate a line chart. Do those colors still hold up with smaller markings?
+
+#the smaller markings and putting more space between them helps distinguishing colors, smaller shapes is also makes the many colors less visually overwhelming
 
 ## Code exercises
 
 ### Picking a palette
 
-Visit [ColorBrewer](https://colorbrewer2.org) and [Carto Colors](https://carto.com/carto-colors/). For each chart below, pick a ColorBrewer or Carto palette of an appropriate type. Then apply that palette to the chart with `scale_fill_brewer` or `rcartocolor::scale_fill_carto_d`, depending on the source (and change "fill" to "color" depending on the geom type). Each function will take the palette name as its `palette` argument.
+Visit [ColorBrewer](https://colorbrewer2.org) and [Carto Colors](https://carto.com/carto-colors/). For each chart below, pick a ColorBrewer or Carto palette of an appropriate type. Then apply that palette to the chart with`scale_fill_brewer`` or `rcartocolor::scale_fill_carto_d`, depending on the source (and change "fill" to "color" depending on the geom type). Each function will take the palette name as its `palette` argument.
 
 For each chart, then decide whether the default version of the palette works well. Are colors distinct enough from each other? Did you use the right type of palette (sequential, qualitative, or diverging) for the data? If the palette has a gray color, is it used in a way that makes sense? If it doesn't have a gray color, do you think it would be good to add one?
 
@@ -77,9 +102,34 @@ cost_burden <- acs_county |>
     ) |>
     dplyr::mutate(name = forcats::as_factor(name))
 
+
+
 ggplot(cost_burden, aes(x = name, y = share, fill = group)) +
     geom_col(position = position_dodge2()) +
-    labs(title = "Cost burden and severe cost burden rates, 2024")
+    labs(title = "Cost burden and severe cost burden rates, 2024")+
+    scale_fill_brewer(palette="Dark2")
+
+
+q_pal <- RColorBrewer::brewer.pal(3, "Dark2")
+
+ggplot(cost_burden, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_dodge2()) +
+    labs(title = "Cost burden and severe cost burden rates, 2024")+
+     scale_fill_manual(values = q_pal)
+
+q_pal <- RColorBrewer::brewer.pal(8, "Dark2")
+
+q_pal
+
+q_pal <- RColorBrewer::brewer.pal(8, "Dark2")[c(1, 7)]
+
+ggplot(cost_burden, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_dodge2()) +
+    labs(title = "Cost burden and severe cost burden rates, 2024") +
+    scale_fill_manual(values = q_pal)
+#I like this indexed version ofthe palette better than the default
+
+
 ```
 
 
@@ -96,7 +146,19 @@ age <- acs_county |>
 
 ggplot(age, aes(x = name, y = share, fill = group)) +
     geom_col(position = position_fill(reverse = TRUE)) +
-    labs(title = "Population by age group, 2024")
+    labs(title = "Population by age group, 2024")+
+    scale_fill_brewer(palette="Dark2")
+
+q_pal2<- RColorBrewer::brewer.pal(8, "Dark2")[c(6,4,5, 7)]
+
+ggplot(age, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Population by age group, 2024")+
+    scale_fill_manual(values = q_pal2)
+
+#I like the default palette
+    
+    
 ```
 
 
@@ -113,7 +175,20 @@ race <- acs_county |>
 
 ggplot(race, aes(x = name, y = share, fill = group)) +
     geom_col(position = position_fill(reverse = TRUE)) +
-    labs(title = "Population by race/ethnicity, 2024")
+    labs(title = "Population by race/ethnicity, 2024")+
+    scale_fill_brewer(palette="Dark2")
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Population by race/ethnicity, 2024")+
+    scale_fill_brewer(palette="Pastel1")
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Population by race/ethnicity, 2024")+
+    scale_fill_brewer(palette="Set2")
+
+#the default palettes look pretty good most of the time without selecting specifc colors myself
 ```
 
 ```{r}
@@ -129,9 +204,39 @@ acs_tract <- justviz::acs |>
         )
     )
 
-ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, color = county)) +
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
     geom_point(alpha = 0.7) +
-    labs(title = "Diversity index vs % foreign-born by tract, 2024")
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Set2")
+
+#needed to change scale_fill_brewer to scale_colour_brewer here
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Pastel2")
+#pastel too light with this alpha level
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Dark2")
+
+q_pal3<- RColorBrewer::brewer.pal(8, "Dark2")[c(2,4,5,3)]
+
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_manual(values = q_pal3)
+
+#Like default again
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Dark2")
+
 ```
 
 ```{r}
@@ -141,7 +246,26 @@ ggplot(
     aes(x = foreign_born, y = diversity_idx, color = balt_county)
 ) +
     geom_point(alpha = 0.7) +
-    labs(title = "Diversity index vs % foreign-born by tract, 2024")
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Dark2")
+
+q_pal4<- RColorBrewer::brewer.pal(8, "Dark2")[c(1,6)]
+
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = balt_county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_manual(values = q_pal4)
+
+q_pal5<- RColorBrewer::brewer.pal(8, "Dark2")[c(1,4)]
+
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = balt_county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_manual(values = q_pal5)
+
+#I like this one with manually selected colors
 ```
 
 ### Revising a palette
@@ -153,13 +277,17 @@ Get a copy of a premade sequential palette with only 3 colors. Print it to see i
 ```{r}
 #| label: pal-1
 # with colorbrewer
-pal_to_adjust <- RColorBrewer::brewer.pal(n = 3, name = "") # plug in a name here
+pal_to_adjust <- RColorBrewer::brewer.pal(n = 3, name = "Purples") # plug in a name here
 # or with carto
 # pal_to_adjust <- rcartocolor::carto_pal(n = 3, name = "") # plug in a name here
 print(pal_to_adjust)
 ```
 
 In Chromatta, set the number of colors to 5. Make sure correct lightness and intelligent interpolation are both switched off. Start with the LAB color space selected (first button). Then switch to HSL. What do you notice about the transitions between colors and how that changes? What about after turning on correct lightness and color interpolation?
+
+#Diffenece between LAB and HSL: Difference is subtle but I think HSL has slightly more distinguishable difference between the colors and sharper transitions
+
+#Turning on lightness and interpolation settings:The correct lightness option darkened the intermediate colors of gradient and made transitions sharper. The interpolation setting seemed to lighten the colors and made the transitions smoother.
 
 Now remove the middle color so you just have the two end points. Switch between different color spaces and settings, and check out the sample visuals panel. Once you find a 5-color palette you like, export it by clicking the JavaScript copy button (looks like `[ ]`).
 
@@ -177,7 +305,7 @@ c('#d1eeea', '#a1c7ca', '#74a1ac', '#4c7b90', '#2a5674')
 
 ```{r}
 #| label: pal-paste
-pal_chrom <- c() # replace with your palette from chromatta
+pal_chrom <- c('#efedf5', '#cdcce4', '#acacd3', '#8f8bc2', '#756bb1') # replace with your palette from chromatta
 ```
 
 Then use that new palette with `scale_fill_manual` in the chart below.
@@ -192,3 +320,5 @@ ggplot(age, aes(x = name, y = share, fill = group)) +
 ```
 
 Compare it to your previous version of this chart (population by age). Which do you like better? What works and doesn't work with each?
+
+#In this new version of the chart,I like how the sequential gradient represents the sequence of age but I like the previous version where a non-sequential color palatte was used because the categories are very clear. This had me thinking of how in class we discussed that colors that are easily describeable by people are ideal. For example, its easier to say "age 65 plus is the magenta color and ages 18-34 is the orange color" than to say "age 65 plus is the darkest purple and ages 18-34 is the second lightest purple." With the sequential palette, people could figure it out but its definetly extra work on the audience compared to a non-sequential palette. This extra work doesn't seem worth it to vizualize the age gradient, which to me doesn't seem that important as it is obvious. 
