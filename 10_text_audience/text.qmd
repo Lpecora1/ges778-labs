@@ -1,0 +1,135 @@
+---
+title: Text, audience, accessibility
+format: gfm
+---
+
+Get set up by sourcing the formatters utility script, plus any other scripts of helpers you've defined. Pick a qualitative color palette, such as from Carto Colors or ColorBrewer. You're now starting to do the sorts of refining tasks that should set you up for a good grade on your midterm project!
+
+```{r}
+#| label: setup
+# source formatters script. add any other scripts in your utils folder you have
+source(here::here("utils/formatters.R"))
+library(ggplot2)
+
+# placeholders
+# qual_pal <- rcartocolor::carto_pal(name = "Pastel")
+# qual_pal <- RColorBrewer::brewer.pal(n = 5, name = "Set2")
+```
+
+## Adding text within a chart
+
+Go back to lab 2 where we defined a function to place labels slightly inward from the end of a bar. Copy and paste that code here. 
+
+```{r}
+#| label: label-nudge-function
+# placeholder---this just returns the input value
+label_nudge <- function(x) {
+    x
+}
+```
+
+Add code to the definition of dental_visit to add 2 new variables: `nudged_value`, a nudged position for the labels, and `pct_value`, where you've formatted the labels as percentages. Do this either in 1 or 2 `dplyr::mutate` calls. 
+
+You can use the `percent` function that's in the formatters script, or define a new one to fit a different number of decimal places (`accuracy` argument), since the CDC data includes 1 decimal place.
+
+If the label placement doesn't look the way you want, add or adjust arguments to your `label_nudge` function until you like the way things are calculated.
+
+One helpful pair of `geom_text` arguments is `hjust`/`vjust`, which set the horizontal and vertical justifications, respectively, and range from 0 (aligned at the left/bottom) to 1 (aligned at the right/top). For vertical bars, you want the labels centered horizontally (`hjust = 0.5`); for horizontal bars, you want labels centered vertically (`vjust = 0.5`). Those are both the defaults, but I've set them here explicitly.
+
+```{r}
+#| label: label-nudge-1
+dental_visit <- justviz::cdc |>
+    dplyr::filter(
+        location %in%
+            c(
+                "US",
+                "Maryland",
+                "Baltimore city",
+                "Baltimore County",
+                "Howard County",
+                "Anne Arundel County"
+            )
+    ) |>
+    dplyr::filter(indicator == "Dental visit") |>
+    # arrange to make sure locations are ordered by level, then alphabetically
+    dplyr::arrange(level, location) |>
+    dplyr::mutate(location = forcats::as_factor(location)) |>
+    dplyr::mutate(value = value / 100) |>
+    # placeholders---change with your own code
+    dplyr::mutate(nudged_value = label_nudge(value)) |>
+    dplyr::mutate(pct_value = value)
+
+ggplot(dental_visit, aes(x = location, y = value)) +
+    geom_col(fill = qual_pal[1]) +
+    geom_text(
+        aes(y = nudged_value, label = pct_value),
+        size = 14,
+        size.unit = "pt",
+        fontface = "bold",
+        hjust = 0.5
+    )
+```
+
+Does that function work as well when the chart is flipped to horizontal? Adjust arguments of the function and in your `geom_text` call. 
+
+```{r}
+#| label: label-nudge-2
+ggplot(dental_visit, aes(x = value, y = location)) +
+    geom_col(fill = qual_pal[1]) +
+    geom_text(
+        aes(x = nudged_value, label = pct_value),
+        size = 14,
+        size.unit = "pt",
+        fontface = "bold",
+        vjust = 0.5
+    ) +
+    # something I learned this week is that this now works for discrete scales!
+    coord_cartesian(reverse = "y")
+```
+
+## Audience
+
+Copy over the code for one of your lab 9 charts with your nice theme applied. Imagine you're a consultant to a local government agency (pick one depending on what data is in your chart). Make 2 revisions of your chart:
+
+- One version you'd use to present your research to a meeting of officials from the agency. You can use whatever type of title you want, but it should be at no higher than a 10th grade reading level.
+- One version you'd suggest they use for a public awareness campaign on the issue, such as social media posts, handouts at clinics or government offices, posters on bus shelters, etc. Use narrative titles ("Baltimore County has a higher...") at no higher than a 7th grade reading level.
+
+When you design for each audience, consider your chart type and your use of color, text, and annotations. Add annotations that you think will help guide your reader if necessary, but don't add clutter.
+
+Use [wordcalc](https://www.wordcalc.com/readability/) or another online Flesch-Kincaid grade level checker. (On wordcalc, you want the score that says "Flesch-Kincaid Grade Level").
+
+For both charts, write alt text that will explain the chart to someone using a screen reader (put it in the `fig-alt` comment). Follow the recommendations from [Amy Cesal's post](https://medium.com/nightingale/writing-alt-text-for-data-visualization-2a218ef43f81?sk=32db60d651933b5ac2c5b6507f3763b5).
+
+
+```{r}
+#| label: chart-agency
+#| fig-alt: ""
+#
+```
+
+
+```{r}
+#| label: chart-public
+#| fig-alt: ""
+#
+```
+
+## Contrast
+
+Copy your vertical chart of dental visits (the chunk labeled "label-nudge-1"). You'll test contrast between the labels and the bars using the [APCA contrast checker](https://apcacontrast.com/). Plug in your label color (text, on the left) and your bar fill color (background, on the right). For text like this, you need a Lc value of at least 60. If you don't have enough contrast, adjust the colors until you do.
+
+Make two versions of this chart, one with dark labels (`"#444444"` or lower) and one with light labels (`"#eeeeee"` or higher). The fill colors for these charts will have to be different.
+
+The RStudio add-in [colourpicker](https://github.com/daattali/colourpicker) helps convert between R's named colors (e.g. gray10) and hex codes (#1a1a1a). You can also look up gray colors from [R Charts](https://r-charts.com/colors/), or use the function `col2hex` which I've added to a utility script you can source.
+
+```{r}
+#| label: contrast-labels-dark
+#
+
+```
+
+```{r}
+#| label: contrast-labels-light
+#
+
+```

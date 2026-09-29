@@ -1,0 +1,24 @@
+---
+title: Themes and using a styleguide
+format: gfm
+---
+
+Pick 2 charts of different types from previous labs. Copy & paste the code here. Looking at the styleguide you chose last week, build color palettes and a theme that will replicate aspects of that styleguide. You don't have to adhere to everything; feel free to tweak the colors or other specifications.
+
+```{r}
+#| label: copy-old-charts
+ 
+```
+
+
+```{r}
+#| label: themed-chart-1
+ 
+```
+
+
+```{r}
+#| label: themed-chart-2
+ 
+```
+
