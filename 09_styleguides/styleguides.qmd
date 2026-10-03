@@ -7,18 +7,81 @@ Pick 2 charts of different types from previous labs. Copy & paste the code here.
 
 ```{r}
 #| label: copy-old-charts
+
+library(ggplot2)
+
+#scatter
+acs_tract <- justviz::acs |>
+    dplyr::filter(county %in% locations) |>
+    # lump counties besides Balt County into "other"
+    dplyr::mutate(
+        balt_county = forcats::fct_other(
+            county,
+            keep = "Baltimore County",
+            other_level = "Nearby counties"))
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity index vs % foreign-born by tract, 2024")+
+    scale_colour_brewer(palette="Dark2")
+
+
+#stacked bar
+race <- acs_county |>
+    dplyr::select(level, name, white, black, latino, asian, other_race) |>
+    tidyr::pivot_longer(
+        -level:-name,
+        names_to = "group",
+        values_to = "share"
+    ) |>
+    dplyr::mutate(dplyr::across(c(name, group), forcats::as_factor))
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Population by race/ethnicity, 2024")+
+    scale_fill_brewer(palette="Set2")
+
+
+#Using Urban Institute Style Guide, they have thier own theme package but I am trying using individual theme arguments
  
 ```
 
 
 ```{r}
 #| label: themed-chart-1
+
+urban_palette <- c("#1696d2", "#ec008b", "#000000", "#fdbf11")
+
+ggplot(acs_tract, aes(x = foreign_born, y = diversity_idx, colour = county)) +
+    geom_point(alpha = 0.7) +
+    labs(title = "Diversity increases with greater foreign-born pop.",x="%    foreign-born",y="Diversity index", subtitle="Diversity index vs % foreign-born in Baltimore metro tracts, 2024", colour = NULL)+
+    scale_colour_manual(values = urban_palette)+
+    scale_y_continuous(labels = scales::label_percent())+
+    scale_y_continuous(labels = scales::label_percent())+
+    theme(legend.position="top", axis.line.y=element_blank(), axis.ticks.y=element_blank(),panel.background=element_rect("white"),axis.line.x =element_line(1)
+          )
+
+#in label section, colour=NULL removes legend title
+
  
 ```
 
 
 ```{r}
 #| label: themed-chart-2
+
+urban_palette2 <- c("#1696d2", "#d2d2d2", "#000000", "#55b748","#ec008b")
+
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Racial/ethnic makeup varies in Baltimore metro",x=NULL,y="Share of pop.", subtitle="Population by race/ethnicity in Baltimore metro counties, 2024", fill = NULL)+
+    scale_fill_manual(values = urban_palette2)+
+    scale_y_continuous(labels = scales::label_percent())+
+    theme(legend.position="top", axis.line.y=element_blank(), axis.ticks.y=element_blank(),panel.background=element_rect("white"),axis.line.x =element_line(1)
+          )
+
+#be sure to scale_colour_manual or scale_colour_brewer to scale_fill_manual or scale_fill_brewer depending on the chart syntax, here geom_col uses fill not colour
  
 ```
 

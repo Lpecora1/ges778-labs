@@ -12,8 +12,8 @@ source(here::here("utils/formatters.R"))
 library(ggplot2)
 
 # placeholders
-# qual_pal <- rcartocolor::carto_pal(name = "Pastel")
-# qual_pal <- RColorBrewer::brewer.pal(n = 5, name = "Set2")
+#qual_pal <- rcartocolor::carto_pal(name = "Dark2")
+qual_pal <- RColorBrewer::brewer.pal(n = 5, name = "Dark2")
 ```
 
 ## Adding text within a chart
@@ -26,6 +26,19 @@ Go back to lab 2 where we defined a function to place labels slightly inward fro
 label_nudge <- function(x) {
     x
 }
+
+data1$y_nudge <- label_nudge(data1$value)
+
+#ex of it being used
+data1$y_nudge <- label_nudge(data1$value)
+ggplot(data1, aes(x = group, y = value)) +
+    geom_col() +
+    geom_text(
+        aes(label = value, y = y_nudge),
+        color = "white",
+        size = 6,
+        vjust = 1
+    )
 ```
 
 Add code to the definition of dental_visit to add 2 new variables: `nudged_value`, a nudged position for the labels, and `pct_value`, where you've formatted the labels as percentages. Do this either in 1 or 2 `dplyr::mutate` calls. 
@@ -57,7 +70,7 @@ dental_visit <- justviz::cdc |>
     dplyr::mutate(value = value / 100) |>
     # placeholders---change with your own code
     dplyr::mutate(nudged_value = label_nudge(value)) |>
-    dplyr::mutate(pct_value = value)
+    dplyr::mutate(pct_value = percent(value))
 
 ggplot(dental_visit, aes(x = location, y = value)) +
     geom_col(fill = qual_pal[1]) +
@@ -74,7 +87,30 @@ Does that function work as well when the chart is flipped to horizontal? Adjust 
 
 ```{r}
 #| label: label-nudge-2
-ggplot(dental_visit, aes(x = value, y = location)) +
+dental_visit2 <- justviz::cdc |>
+    dplyr::filter(
+        location %in%
+            c(
+                "US",
+                "Maryland",
+                "Baltimore city",
+                "Baltimore County",
+                "Howard County",
+                "Anne Arundel County"
+            )
+    ) |>
+    dplyr::filter(indicator == "Dental visit") |>
+    # arrange to make sure locations are ordered by level, then alphabetically
+    dplyr::arrange(level, location) |>
+    dplyr::mutate(location = forcats::as_factor(location)) |>
+    dplyr::mutate(value = value / 100) |>
+    # placeholders---change with your own code
+    dplyr::mutate(nudged_value = label_nudge(0.6)) |>
+    dplyr::mutate(pct_value = percent(value))
+
+
+
+ggplot(dental_visit2, aes(x = value, y = location)) +
     geom_col(fill = qual_pal[1]) +
     geom_text(
         aes(x = nudged_value, label = pct_value),
@@ -103,15 +139,62 @@ For both charts, write alt text that will explain the chart to someone using a s
 
 ```{r}
 #| label: chart-agency
-#| fig-alt: ""
+#| fig-alt: "Stacked bar chart of race/ethnicity in Baltimore metro area counties where shares vary by county and Baltimore City has a much higher share of black people in its population than other places."
 #
+race <- acs_county |>
+    dplyr::select(level, name, white, black, latino, asian, other_race) |>
+    tidyr::pivot_longer(
+        -level:-name,
+        names_to = "group",
+        values_to = "share"
+    ) |>
+    dplyr::mutate(dplyr::across(c(name, group), forcats::as_factor))
+
+urban_palette2 <- c("#1696d2", "#d2d2d2", "#000000", "#55b748","#ec008b")
+
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Racial makeup varies in the Baltimore metro",x=NULL,y="Share of pop.", fill = NULL)+
+    scale_fill_manual(values = urban_palette2)+
+    scale_y_continuous(labels = scales::label_percent())+
+    theme(legend.position="top", axis.line.y=element_blank(), axis.ticks.y=element_blank(),panel.background=element_rect("white"),axis.line.x =element_line(1)
+          )
+
+#removed subtitle since it was high grade level and and removed "/ethnicity" from the title since this was bumping up the score
+#I think additional annotations or encodings would be too cluttered
+#Struggled to gwt grade level low for alt text without sacrificing description
 ```
 
 
 ```{r}
 #| label: chart-public
-#| fig-alt: ""
+#| fig-alt: "Stacked bar chart of race in Baltimore metro area counties where shares vary by county and Baltimore City has a much higher share of black people in its population than other places."
 #
+
+race <- acs_county |>
+    dplyr::select(level, name, white, black, latino, asian, other_race) |>
+    tidyr::pivot_longer(
+        -level:-name,
+        names_to = "group",
+        values_to = "share"
+    ) |>
+    dplyr::mutate(dplyr::across(c(name, group), forcats::as_factor))
+
+urban_palette2 <- c("#1696d2", "#d2d2d2", "#000000", "#55b748","#ec008b")
+
+
+ggplot(race, aes(x = name, y = share, fill = group)) +
+    geom_col(position = position_fill(reverse = TRUE)) +
+    labs(title = "Race varies in the Baltimore area",x=NULL,y="Share of pop.", fill = NULL)+
+    scale_fill_manual(values = urban_palette2)+
+    scale_y_continuous(labels = scales::label_percent())+
+    theme(legend.position="top", axis.line.y=element_blank(), axis.ticks.y=element_blank(),panel.background=element_rect("white"),axis.line.x =element_line(1)
+          )
+
+#Changed "racial makeup" or "race/ethnicity" to just "race" to get appropriate reading level though I feel just using "race" is a little reductive, also changed "metro" to "area"
+#I think additional annotations or encodings would be too cluttered
+#Did not reach same low grade level as title but tried use simpler language than the agency version
 ```
 
 ## Contrast
@@ -126,10 +209,53 @@ The RStudio add-in [colourpicker](https://github.com/daattali/colourpicker) help
 #| label: contrast-labels-dark
 #
 
+dental_visit <- justviz::cdc |>
+    dplyr::filter(
+        location %in%
+            c(
+                "US",
+                "Maryland",
+                "Baltimore city",
+                "Baltimore County",
+                "Howard County",
+                "Anne Arundel County"
+            )
+    ) |>
+    dplyr::filter(indicator == "Dental visit") |>
+    # arrange to make sure locations are ordered by level, then alphabetically
+    dplyr::arrange(level, location) |>
+    dplyr::mutate(location = forcats::as_factor(location)) |>
+    dplyr::mutate(value = value / 100) |>
+    # placeholders---change with your own code
+    dplyr::mutate(nudged_value = label_nudge(value)) |>
+    dplyr::mutate(pct_value = percent(value))
+
+ggplot(dental_visit, aes(x = location, y = value)) +
+    geom_col(fill = "honeydew1") +
+    geom_text(
+        aes(y = nudged_value, label = pct_value),
+        size = 14,
+        size.unit = "pt",
+        fontface = "bold",
+        hjust = 0.5
+    )+
+    theme(panel.background=element_rect("white"))
+
 ```
 
 ```{r}
 #| label: contrast-labels-light
 #
+
+ggplot(dental_visit, aes(x = location, y = value)) +
+    geom_col(fill = "darkgoldenrod4") +
+    geom_text(
+        aes(y = nudged_value, label = pct_value),
+        size = 14,
+        size.unit = "pt",
+        fontface = "bold",
+        hjust = 0.5,
+        colour="white"
+    )
 
 ```
