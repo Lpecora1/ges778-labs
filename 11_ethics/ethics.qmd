@@ -18,9 +18,10 @@ Do a little EDA, focused mainly on 2 or 3 indicators. Because of the long shape 
 
 ```{r}
 #| label: subset
+justviz::ej_natl
 ej_subset <- justviz::ej_natl |>
     # pick different indicators here
-    dplyr::filter(indicator %in% c("pm25", "no2")) |>
+    dplyr::filter(indicator %in% c("diesel", "lead_paint_exposure")) |>
     tidyr::pivot_wider(
         id_cols = tract,
         names_from = indicator,
@@ -38,6 +39,24 @@ Draft a chart that compares two variables in your reshaped data. Because you wan
 * A citation for the dataset from Harvard Dataverse (recommended citations are there, as is metadata to use in a citation manager)
 * Acknowledgement of the data being removed from EPA's website that stays politically neutral
 
+```{r}
+#EPA EJSCREEN Chart
+
+ggplot(ej_subset,aes(x=
+d5_ptile_lead_paint_exposure,y=d5_ptile_diesel))+
+  geom_point(colour = "blue",alpha = 0.5)+
+  labs(title = "High lead and particulate exposure often accompany each other nationwide",x="Percentile of lead paint exposure",y="Percentile of diesel particulate matter", caption = "Source: EPA EJSCREEN dataset via Harvard Dataverse 
+       (EPA, 2024, Environmental Justice Mapping and Screening Tool (EJScreen), https://doi.org/10.7910/DVN/RLR5AX, Harvard Dataverse, V4, UNF:6:Ew64oHBMGoTrNkLoYBJcUw== [fileUNF]). 
+       EJSCREEN data was removed from the EPA website in 2025. Variables are percentiles, not direct rates. 
+       Lead paint exposure = % of housing units build before 1960, diesel particulate matter = diesel partiuclate matter level in the air")+
+  geom_smooth(color="red")+
+theme(plot.caption = element_text(size=6
+                                  ))
+
+#add trendline and figure note
+```
+
+
 ## Knowing your role
 
 You have a summer internship doing data visualization for a public health agency that serves Baltimore city and Baltimore, Anne Arundel, Howard, and Harford Counties. During a heat wave, wildfires start in Western Maryland, and heavy smoke begins to drift into the area. The agency needs to identify census tracts where people may be at heightened risk of health problems related to the smoke so they can do targeted outreach.
@@ -51,3 +70,66 @@ You also have some data, namely:
 * Additional ACS data on households' internet access and workers' commuting methods ("acs_addl.csv" in the same directory as this notebook)
 
 Draft two charts you can present to the outreach team at the agency to help them strategize. *Do* put forward what you believe to be information that will help them with this, but *do not* try to give answers you're not qualified to give.
+
+```{r}
+#Setup
+justviz::cdc
+justviz::acs
+
+#Anne Arnudel = 24003
+#Baltimore County = 24005
+#Baltimore City = 24510
+#Harford = 24025
+#Howard = 24027
+
+#not sure how to filter for tracts that begin with these fips, maybe create a new field?
+#also couldn't separate balitmore county and baltimore city
+
+cdc_subset <- justviz::cdc |>
+  dplyr::filter(
+    level == "county",
+    year == "2023",
+    location %in% c("Anne Arundel","Baltimore","Baltimore City","Harford","Howard"),
+    indicator %in% c("Current asthma", "Health insurance")
+  )
+
+
+acs_subset <-justviz::acs|>
+  dplyr::filter(level == "tract", county %in% c("Anne Arundel County","Baltimore County","Baltimore city","Harford County","Howard County")) |>
+  dplyr::select(county, name, poverty,pop_density)
+  
+
+
+```
+
+```{r}
+#Chart1
+
+
+ggplot(cdc_subset, aes(x = location, y = value, fill = indicator)) +
+    geom_col(width = 0.8, position = position_dodge2()) +
+    scale_fill_brewer(palette="Dark2")+
+    scale_x_discrete(labels = scales::label_wrap(10)) +
+    scale_y_continuous() +
+    labs(title = "High asthma rate and lack of health insurance coverage in Baltimore City and County",subtitle="Current asthma = % pop. with asthma. Health insurance = % pop. lacking health insurance coverage",x=NULL, y="% pop.",caption="These indicators do not necesarily correspond with public health risk to wildfire smoke and where smoke will travel.
+Lack of health insurance coverage limits access to healthcare and asmthma may cause respritatory problems")+
+  theme(plot.caption = element_text(size=7))
+
+#not my best chart since I struggled to separate data by fips code prefixes, I will bring up in class
+```
+
+```{r}
+#Chart2
+
+ggplot(acs_subset, aes(x=pop_density,y=poverty,colour = county))+
+  geom_point(alpha = 0.7)+
+  scale_colour_brewer(palette="Dark2")+
+  labs(x="Pop. Density (People per square mile)", y= "Pop. in Poverty", title="Several Baltimore City and County tracts exhibit high poverty and pop. density", caption="These indicators do not necesarily correspond with public health risk to wildfire smoke and where smoke will travel. 
+Poverty limits access to health care and high pop. density may indicate concentrated air pollution from human activities")+
+  theme(legend.title = element_blank())+
+  scale_y_continuous(labels = scales::label_percent())+
+  theme(plot.caption = element_text(size=7))
+
+#not sure if my caption goes to far in providing information but I tried to provide a disclaimer
+```
+
