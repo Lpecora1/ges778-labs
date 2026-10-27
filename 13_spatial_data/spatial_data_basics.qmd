@@ -1,0 +1,199 @@
+---
+title: Spatial data basics
+format: gfm
+---
+
+## Spatial operations
+
+```{r}
+#| label: setup
+library(ggplot2)
+```
+
+Now that you're set up for working with spatial data in R, we'll practice a few common tasks that, all combined, will get you a nice map.
+
+First, search for an address within Maryland where you want to focus your map (don't use anything personal, our lab repos are public!) on OpenStreetMap's behind-the-scenes [search engine](https://nominatim.openstreetmap.org/ui/search.html). Find the result you want and click "details." In the table on the next page you'll see coordinates for this result; use those to create an `sf` point object. Its CRS code is 4269.
+
+```{r}
+#| label: center-pt
+# enter the coords inside c() as numbers in the order longitude, latitude
+center_coords <- sf::st_point(x = c())
+center_web_merc <- sf::st_sfc()
+```
+
+Now use `sf::st_transform()` to transform that to a CRS that uses feet and is focused on Maryland (2248). Verify that it has units "ftUS":
+
+```{r}
+#| label: center-proj
+center_proj <- sf::st_transform()
+center_proj
+```
+
+Create a buffer of 5 miles around that center point (1 mile = 5280 feet) (feel free to change the radius if you want):
+
+```{r}
+#| label: buff
+center_buff <- sf::st_buffer(center_proj, dist = 5 * 5280)
+center_buff
+
+# very boring plot
+ggplot(center_buff) +
+  geom_sf()
+```
+
+Use `tigris::tracts` to get tracts for all of Maryland (`justviz::tracts_sf` is a subset, so get a fresh copy). Set the argument `cb = TRUE` to get simplified boundaries that are better for mapping, and `progress_bar = FALSE` so your markdown doesn't get flooded with lines. Then use the tracts and `dplyr`'s `group_by` and `summarise` to merge tracts together to form counties.
+
+```{r}
+#| label: tracts
+tracts_sf <- tigris::tracts(state = "MD", cb = TRUE) |>
+  dplyr::select(geoid = GEOID, county = NAMELSADCO)
+counties_sf <- tracts_sf |>
+  # group by counties & summarise
+
+  ggplot(counties_sf) +
+  geom_sf()
+```
+
+Get the intersection of the buffer and the tract shapes. To do this, they'll need to have the same CRS. To find an `sf` object's CRS, call `sf::st_crs` on it. If the CRSes are not the same, you'll have to reproject one to match the other. Put the tracts on the left side of your `sf::st_intersection` call so you can retain other info like FIPS codes.
+
+```{r}
+#| label: intersection
+buff_reproj <- sf::st_transform(center_buff)
+tracts_in_buffer <- sf::st_intersection(tracts_sf, buff_reproj)
+tracts_in_buffer
+
+ggplot(tracts_in_buffer) +
+  geom_sf()
+```
+
+Here's a confusing step: you already found the *intersection* of the buffer and another polygon, which creates a new shape. Now you're going to find *which shapes intersect*; this doesn't change the shape, just returns true/false values. This is a predicate function. If you just call the predicate function itself, you'll get a matrix showing whether each shape on the left (24 counties) intersects at all with the shape on the right (1 buffer polygon).
+
+```{r}
+#| label: predicate
+sf::st_intersects(counties_sf, buff_reproj)
+```
+
+There are a few ways to do this, but we'll make a sparse matrix of which counties intersect with the buffer, then keep the counties that have values in the matrix. The function `lengths` gives the length of each element in a vector; in this case, that will give us how many times shapes from one object intersect shapes from the other object, and we can filter for anywhere that has 1 or more intersections.
+
+```{r}
+#| label: intersects
+counties_mask <- sf::st_intersects()
+counties_mask
+lengths(counties_mask)
+
+nearby_counties <- counties_sf |> dplyr::filter(lengths(counties_mask) > 0)
+```
+
+That should give you a subset of counties---in my case, I have 4. 
+
+Finally put it all together. Call `ggplot` as usual, but leave it empty since you'll have multiple datasets for the different layers. Then add `geom_sf` calls for `nearby_counties`, `tracts_in_buffer`, and `center_web_merc`, adjusting whatever you want including any `aes` calls inside your layers. Give each `geom_sf` call a data frame with `data = __`.
+
+My ugly example looks like this:
+
+![Example of tracts in UMBC buffer](example-everything-map.png)
+
+```{r}
+#| label: everything
+ggplot()
+```
+
+
+## Layers
+
+We use `geom_sf` a little differently from other geoms, where it's common to add up multiple layers with different data frames. Normally we'd have a data frame in our original `ggplot` call, and its scales and any aesthetics assigned in that initial call trickle down to the geoms that follow unless we reassign them (or cancel them out with `inherit.aes = FALSE`). But because we'll have different data frames for each layer, it can be better to leave the `ggplot` call empty and give each `geom_sf` its own `data` argument.
+
+In the same way that you created `counties_sf` by summarizing tract geometries by county, create a shape `state_sf` where you summarize all the tracts into one geometry for the state. You now have 3 geographic levels (tracts, counties, and state) that can nest within each other using 3 different layers. Stack the layers and set any aesthetics you want (linewidth and color are both good) to get a map of Maryland that shows all 3 layers distinct from one another, i.e. it's clear which boundaries are for counties and which are for tracts. Hard-code the aesthetics in each geom instead of using `aes`.
+
+A hint: `alpha = 0` will get you a geom with borders but no visible fill, as will `fill = NA` or `fill = "transparent"`.
+
+My example is here. It's chaotic to highlight the different settings you can use; make yours look better.
+
+![Example tracts, counties, state](example-layers.png)
+
+```{r}
+#| label: layers
+
+```
+
+## Legend hacking
+
+Legends in ggplot are normally tough, and with `sf` data they're even worse. Normally a geom can take a true/false/NA value for `show.legend` to determine whether there will be a corresponding legend entry. With `geom_sf`, this argument can take values for the type of shape to show as well. This gives us more options and more headaches. 
+
+Normally we'd want tidy data with a variable to map onto our aesthetics (e.g. some group that we assign to color), but since we often have different spatial data in different data frames, we'll use separate `geom_sf` calls and hard-code fake aesthetics to get a legend. For example, instead of `aes(linewidth = level)` like we would do with a line chart, `aes(linewidth = "Counties")` will force a legend that shows a line or polygon key for counties.
+
+There are a lot of different options for changing your legend keys, including:
+
+* setting a legend type, e.g. `show.legend = "line"` inside `geom_sf`
+* turning on & off multiple legend types, e.g. `show.legend = c(shape = TRUE, color = FALSE)` inside `geom_sf`
+* overriding parts of the legend with a list of options, e.g. `guide = guide_legend(override.aes = list(linewidth = 0))` inside a scale call 
+* changing the key type with a `key_glyph` argument inside a geom (unfortunately not as well documented as other arguments)
+
+To combine multiple legends into one (e.g. color and linewidth), give their aesthetics the same name in a call to `labs`.
+
+My example here took 3 calls to `geom_sf`; 3 manual scales, one of which needed an `override.aes` inside its guide; and a `labs` call to merge legends.
+
+![Example hacked legend](example-legend.png)
+
+```{r}
+#| label: legend
+nearby_tracts <- tracts_sf |>
+  dplyr::filter(county %in% nearby_counties$county)
+```
+
+## Joins
+
+### Spatial & nonspatial
+
+To practice joining a spatial data frame and a nonspatial one, you'll join `justviz::vacants_by_tract` with your `tracts_sf` in a few ways. The first of these is a count of vacant building notices per tract within Baltimore city.
+
+First, do an inner join (`dplyr::inner_join`). You want to end up with an `sf` data frame with one row per city tract, with only the tracts that have vacancies and are included in the vacancy data. Remember my warning about which data frame type needs to be on the left---in order to use `geom_sf` easily, you need an `sf` data frame.
+
+You should have an `sf` data frame with 182 rows. Once you have that, make a map of it, just showing the tracts included.
+
+```{r}
+#| label: inner-join
+tracts_with_vacants <- tracts_sf |>
+  # join here
+
+  class(tracts_with_vacants)
+```
+
+```{r}
+#| label: vacants-map-1
+
+```
+
+With that map, you only draw tracts that are included in both data frames, i.e. tracts in Baltimore city that have at least one vacant notice. Now use a left join so you can keep all tract geometries in the city, but attach the data about vacancies to it. Filter the tracts data frame for just Baltimore city, then do your join. 
+
+There are 199 tracts in the city, so your result should be an `sf` data frame with 199 rows. Make a map of this, with tracts filled based on whether there are any vacancies. Without changing the data, this will be denoted with the fact that `n_vacants` will be NA for rows not in `vacants_by_tract`. Replace NAs with 0 using `tidyr::replace_na(n_vacants, replace = 0)`. Then use `ifelse` to create a variable `has_vacants` with one value for tracts with n_vacants > 0 and another value for other tracts (e.g. "Has vacants" / "No vacants"). Map `has_vacants` to fill, and set a scale that highlights tracts with vacants.
+
+```{r}
+#| label: vacants-map-2
+balt_sf <- tracts_sf |>
+  dplyr::filter(county == "Baltimore city")
+
+balt_tract_vacants_sf <- balt_sf |>
+  # join, replace_na, ifelse
+
+```
+
+Repeat that, but this time highlight tracts with more than some certain number of vacants instead of 0. Change the categories you use for `has_vacants` accordingly (e.g. "50+ vacants" / "<50 vacants").
+
+```{r}
+#| label: vacants-map-3
+
+
+```
+
+### Spatial & spatial
+
+Last, you'll do a spatial join, where you join one spatial data frame to another based on some predicate function. You're actually doing what I did to create `justviz::vacants_by_tract`.
+
+Take your Baltimore city tracts, and do a spatial join with `justviz::vacants_sf` using `sf::st_join`. Make sure to set `left = FALSE` to do an inner join, so you're only left with tracts that contain at least 1 vacant. After the join, you should have an `sf` data frame with more than 11,000 rows, one per vacant building. Each vacant will now have a tract associated with it. At this point, you don't need the geometries, so drop them with `sf::st_drop_geometry`. Then call `dplyr::count` grouping by GEOID to get a count of vacant buildings in each tract. This should have the same number of rows as `justviz::vacants_by_tract`.
+
+```{r}
+#| label: spatial-join 
+balt_sf |>
+  # join, drop, count
+```
+

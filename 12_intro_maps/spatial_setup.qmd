@@ -1,0 +1,77 @@
+---
+title: Setting up for spatial data
+format: gfm
+---
+
+Nothing to write or change here! This notebook should confirm that you have the packages you need to get started working with spatial data. Run code chunks individually, then render the notebook, either by pressing a button (if in RStudio), choosing the render command (if in Positron), or calling the quarto CLI (`quarto render 12_intro_maps/spatial_setup.qmd`). If this runs successfully, you should have:
+
+* a map of counties in Maryland
+* a map of landcover data
+* some data from OpenStreetMap
+* (hopefully) a map of a blob in the shape of Maryland
+
+For that last one, it's not a huge deal if you can't get `rmapshaper` installed. It's a wrapper around a command line tool (also available [online](https://mapshaper.org/)), but it has some other system dependencies that we might just not be able to get working. If you can, great. If not, we can troubleshoot some, and comment that block out if it really doesn't work.
+
+```{r}
+#| label: setup
+pkgs <- c(
+    "sf", # sf : spatial data :: dplyr : tabular data
+    "osmdata", # batch download data from OpenStreetMap
+    "terra", # sf-friendly raster tools
+    "tigris", # download shapefiles from the Census Bureau TIGER database
+    "rmapshaper", # command line tool to edit geographies
+    "tidyterra" # dplyr functions + ggplot geoms for terra rasters
+)
+
+install.packages(pkgs)
+
+# or pak::pkg_install(pkgs) 
+
+# recent update means you should install justviz
+pak::pkg_install("umbc-viz/justviz")
+
+library(ggplot2)
+# terra needs to be loaded for some methods to work
+library(terra)
+```
+
+This will download a shapefile of Maryland counties from the Census Bureau's [TIGER system](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), and make a map.
+
+```{r}
+#| label: tigris
+counties_sf <- tigris::counties(state = "MD", cb = TRUE)
+# storage location for TIGER downloads, if one is set
+Sys.getenv("TIGRIS_CACHE_DIR") 
+plot(counties_sf[, "geometry"])
+```
+
+This will plot raster data from `justviz` (also verifies that you have the most up-to-date version):
+
+```{r}
+#| label: raster 
+land <- justviz::load_land_cover()
+water <- terra::mask(land, land == "Open Water", maskvalues = FALSE)
+plot(water)
+```
+
+This will download data from OpenStreetMap, giving a set of `sf` objects of universities in the area:
+
+```{r}
+#| label: osm 
+universities <- osmdata::getbb("Maryland", display_name_contains = "United States") |> 
+    osmdata::opq() |> 
+    osmdata::add_osm_feature(key = "education", value = "university") |>
+    osmdata::osmdata_sf()
+
+universities
+```
+
+This overly simplifies the boundaries of the state's counties:
+
+```{r}
+#| label: mapshaper
+md_simplified <- rmapshaper::ms_simplify(counties_sf, keep = 0.01)
+plot(md_simplified)
+```
+
+
