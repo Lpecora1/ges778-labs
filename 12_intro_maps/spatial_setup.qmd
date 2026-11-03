@@ -14,6 +14,7 @@ For that last one, it's not a huge deal if you can't get `rmapshaper` installed.
 
 ```{r}
 #| label: setup
+
 pkgs <- c(
     "sf", # sf : spatial data :: dplyr : tabular data
     "osmdata", # batch download data from OpenStreetMap
@@ -33,6 +34,8 @@ pak::pkg_install("umbc-viz/justviz")
 library(ggplot2)
 # terra needs to be loaded for some methods to work
 library(terra)
+
+
 ```
 
 This will download a shapefile of Maryland counties from the Census Bureau's [TIGER system](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html), and make a map.
@@ -72,6 +75,11 @@ This overly simplifies the boundaries of the state's counties:
 #| label: mapshaper
 md_simplified <- rmapshaper::ms_simplify(counties_sf, keep = 0.01)
 plot(md_simplified)
+
+#seems like some security thing on my computer is blocking me from using mapshaper:
+ # Error in inDL(x, as.logical(local), as.logical(now), ...) :
+#unable to load shared object #'C:/Users/Leope/AppData/Local/R/win-library/4.5/geojsonsf/libs/x64/geojsonsf.dll':
+#LoadLibrary failure: An Application Control policy has blocked this file.
 ```
 
 

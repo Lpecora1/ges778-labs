@@ -17,15 +17,15 @@ First, search for an address within Maryland where you want to focus your map (d
 ```{r}
 #| label: center-pt
 # enter the coords inside c() as numbers in the order longitude, latitude
-center_coords <- sf::st_point(x = c())
-center_web_merc <- sf::st_sfc()
+center_coords <- sf::st_point(x = c(-76.4001838,39.315527))
+center_web_merc <- sf::st_sfc(center_coords,crs = 4269)
 ```
 
 Now use `sf::st_transform()` to transform that to a CRS that uses feet and is focused on Maryland (2248). Verify that it has units "ftUS":
 
 ```{r}
 #| label: center-proj
-center_proj <- sf::st_transform()
+center_proj <- sf::st_transform(center_web_merc,2248)
 center_proj
 ```
 
@@ -45,12 +45,13 @@ Use `tigris::tracts` to get tracts for all of Maryland (`justviz::tracts_sf` is 
 
 ```{r}
 #| label: tracts
-tracts_sf <- tigris::tracts(state = "MD", cb = TRUE) |>
+tracts_sf <- tigris::tracts(state = "MD", cb = TRUE,progress_bar=FALSE) |>
   dplyr::select(geoid = GEOID, county = NAMELSADCO)
 counties_sf <- tracts_sf |>
+    dplyr::group_by(county) |>
+    dplyr::summarise()
   # group by counties & summarise
-
-  ggplot(counties_sf) +
+ggplot(counties_sf) +
   geom_sf()
 ```
 
@@ -58,8 +59,13 @@ Get the intersection of the buffer and the tract shapes. To do this, they'll nee
 
 ```{r}
 #| label: intersection
-buff_reproj <- sf::st_transform(center_buff)
-tracts_in_buffer <- sf::st_intersection(tracts_sf, buff_reproj)
+sf::st_crs(tracts_sf)
+sf::st_crs(center_buff)
+
+tracts_sf_proj <- sf::st_transform(tracts_sf,2248)
+
+#buff_reproj <- sf::st_transform(center_buff)
+tracts_in_buffer <- sf::st_intersection(tracts_sf_proj, center_buff)
 tracts_in_buffer
 
 ggplot(tracts_in_buffer) +
@@ -70,18 +76,21 @@ Here's a confusing step: you already found the *intersection* of the buffer and 
 
 ```{r}
 #| label: predicate
-sf::st_intersects(counties_sf, buff_reproj)
+
+counties_sf_proj <- sf::st_transform(counties_sf,2248)
+
+sf::st_intersects(counties_sf_proj, center_buff)
 ```
 
 There are a few ways to do this, but we'll make a sparse matrix of which counties intersect with the buffer, then keep the counties that have values in the matrix. The function `lengths` gives the length of each element in a vector; in this case, that will give us how many times shapes from one object intersect shapes from the other object, and we can filter for anywhere that has 1 or more intersections.
 
 ```{r}
 #| label: intersects
-counties_mask <- sf::st_intersects()
+counties_mask <- sf::st_intersects(counties_sf_proj,center_buff)
 counties_mask
 lengths(counties_mask)
 
-nearby_counties <- counties_sf |> dplyr::filter(lengths(counties_mask) > 0)
+nearby_counties <- counties_sf_proj |> dplyr::filter(lengths(counties_mask) > 0)
 ```
 
 That should give you a subset of counties---in my case, I have 4. 
@@ -94,7 +103,11 @@ My ugly example looks like this:
 
 ```{r}
 #| label: everything
-ggplot()
+ggplot()+
+  geom_sf(data =nearby_counties,fill="lightyellow")+
+  geom_sf(data =tracts_in_buffer,fill="lightblue")+
+  geom_sf(data =center_web_merc,fill="black")+
+  theme_minimal()
 ```
 
 
@@ -112,6 +125,27 @@ My example is here. It's chaotic to highlight the different settings you can use
 
 ```{r}
 #| label: layers
+#get state layer
+tracts_sf2 <- tigris::tracts(state = "MD", cb = TRUE,progress_bar=FALSE) |>
+  dplyr::select(geoid = GEOID, county = NAMELSADCO,state=STATEFP)
+
+states_sf <- tracts_sf2 |>
+    dplyr::group_by(state) |>
+    dplyr::summarise()
+  
+states_sf_proj <- sf::st_transform(states_sf,2248)
+
+ggplot(states_sf_proj) +
+  geom_sf()
+
+
+#map
+ggplot()+
+  geom_sf(data =states_sf_proj,fill=NA,linewidth=1,colour="black")+
+  geom_sf(data =counties_sf_proj,aes(fill=county,alpha=0.3))+
+  geom_sf(data =tracts_sf_proj,fill=NA)+
+  theme_minimal()+
+  theme(legend.position = "none")
 
 ```
 
@@ -138,6 +172,14 @@ My example here took 3 calls to `geom_sf`; 3 manual scales, one of which needed 
 #| label: legend
 nearby_tracts <- tracts_sf |>
   dplyr::filter(county %in% nearby_counties$county)
+
+ggplot()+
+  geom_sf(data =nearby_counties,aes(color="Counties"),fill="lightyellow")+
+  geom_sf(data =tracts_in_buffer, aes(color="Tracts"),fill=NA,linewidth=1)+
+  geom_sf(data =center_web_merc, aes(color="Center"))+
+  theme_minimal()+
+  scale_color_manual(values=c("Counties"="black","Tracts"="lightgrey", "Center"="hotpink"))+
+  labs(color="Legend")
 ```
 
 ## Joins
@@ -152,8 +194,11 @@ You should have an `sf` data frame with 182 rows. Once you have that, make a map
 
 ```{r}
 #| label: inner-join
+
+vac<-justviz::vacants_by_tract
+
 tracts_with_vacants <- tracts_sf |>
-  # join here
+  dplyr::inner_join(vac, by = "geoid")
 
   class(tracts_with_vacants)
 ```
@@ -161,6 +206,9 @@ tracts_with_vacants <- tracts_sf |>
 ```{r}
 #| label: vacants-map-1
 
+ggplot()+
+  geom_sf(data =tracts_with_vacants)
+          
 ```
 
 With that map, you only draw tracts that are included in both data frames, i.e. tracts in Baltimore city that have at least one vacant notice. Now use a left join so you can keep all tract geometries in the city, but attach the data about vacancies to it. Filter the tracts data frame for just Baltimore city, then do your join. 
@@ -173,7 +221,17 @@ balt_sf <- tracts_sf |>
   dplyr::filter(county == "Baltimore city")
 
 balt_tract_vacants_sf <- balt_sf |>
+  dplyr::left_join(vac,by="geoid")|>
+  tidyr::replace_na(list(n_vacants = 0))|>
+  dplyr::mutate(has_vacants = ifelse(n_vacants>0,"Has vacants","No vacants"))
   # join, replace_na, ifelse
+
+ggplot()+
+  geom_sf(data =balt_tract_vacants_sf,aes(fill=has_vacants))+
+  scale_fill_manual(
+    values = c("Has vacants" = "pink","No vacants" = "grey"))
+
+#had to modify replace_na syntax here, it was not running, so debugged with chatgpt, not sure if this is the right way to go about using replace_na
 
 ```
 
@@ -182,6 +240,19 @@ Repeat that, but this time highlight tracts with more than some certain number o
 ```{r}
 #| label: vacants-map-3
 
+balt_sf <- tracts_sf |>
+  dplyr::filter(county == "Baltimore city")
+
+balt_tract_vacants_sf <- balt_sf |>
+  dplyr::left_join(vac,by="geoid")|>
+  tidyr::replace_na(list(n_vacants = 0))|>
+  dplyr::mutate(has_vacants = ifelse(n_vacants>50,"50+ vacants","<50 vacants"))
+  # join, replace_na, ifelse
+
+ggplot()+
+  geom_sf(data =balt_tract_vacants_sf,aes(fill=has_vacants))+
+  scale_fill_manual(
+    values = c("50+ vacants" = "pink","<50 vacants" = "grey"))
 
 ```
 
@@ -194,6 +265,12 @@ Take your Baltimore city tracts, and do a spatial join with `justviz::vacants_sf
 ```{r}
 #| label: spatial-join 
 balt_sf |>
+  dplyr::filter(county == "Baltimore city")|>
+  sf::st_join(justviz::vacants_sf,left=FALSE)|>
+  sf::st_drop_geometry()|>
+  dplyr::count(geoid,name = "n_vacants")
   # join, drop, count
+
+justviz::vacants_by_tract
 ```
 
