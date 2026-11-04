@@ -1,0 +1,51 @@
+---
+title: Mapping data to space
+format: gfm
+---
+
+```{r}
+#| label: setup
+library(ggplot2) 
+```
+
+## Choropleths
+
+Let's make a choropleth! Pick any of the tract-level data we have available in justviz (ACS [`acs`], CDC [`cdc`], EJSCREEN [`ej_natl`], vacants [`vacants_by_tract`], or climate vulnerability [`climate`]), reshape or filter it if necessary to have your variable of interest as its own column (i.e. CDC needs to be reshaped to wide format or filtered for just one indicator). Join it with a tract shapefile (`justviz::tracts_sf`, get a full set of the state's tracts with `tigris::tracts`, and/or filter for whatever counties you want), making sure to put the `sf` data frame on the left side of your join so you retain its data type. Then use `geom_sf` to make a choropleth of a continuous variable. Use `scale_fill_distiller` to use a ColorBrewer palette on continuous data.
+
+```{r}
+#| label: choro-distiller 
+ 
+```
+
+Study the docs for `scale_fill_distiller` to understand the difference between the brewer, distiller, and fermenter variants (beyond the punny names). Try all three with your data---only 2 of them will work. Decide which you like best for this data. What tradeoffs do you find between legibility and precision?
+
+```{r}
+#| label: choro-more-scales 
+ 
+```
+
+## Binning algorithms
+
+It's common to use binning algorithms to cut continuous values into bins for a choropleth, but the choice of algorithm can dramatically change how the data is understood. The function `justviz::jenks` will cut a continuous variable into binned values and return a factor, using the Jenks/Fisher algorithms. These are designed to highlight skewed data well, but aren't the best choice for all situations.
+
+Instead, experiment with the function `classInt::classify_intervals`, which gives you access to several different algorithms. Depending on the algorithm and distribution of your data, the number of classes you request might be a goal but not necessarily what you get. Use it like this:
+
+```{r}
+#| label: classint
+#| eval: false 
+justviz::ej_natl |>
+    dplyr::filter(indicator == "pm25") |>
+    dplyr::mutate(value_brk = classInt::classify_intervals(value_ptile, n = 5, style = "pretty"))
+```
+
+Now before remaking your choropleth, cut the variable into bins using one of the algorithms available in `classify_intervals` (look at the function docs). The binned column will be a factor. Use this column for the choropleth's fill, and use the same palette as above with `scale_fill_brewer`. Try multiple algorithms---some will give you way more bins than you can get a palette for, some will give too few to be useful, so just mess around with arguments.
+
+```{r}
+#| label: choro-binned
+ 
+```
+
+## Do it all again
+
+Now that you've made a choropleth with a sequential fill, and found a binning algorithm that works well for the same data, try it all again with a different variable. Pick something with a different distribution---if the first variable was very skewed, try something closer to a normal or uniform distribution.
+

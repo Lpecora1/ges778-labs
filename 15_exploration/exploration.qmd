@@ -1,0 +1,74 @@
+---
+title: Helping readers explore
+format: gfm
+---
+
+```{r}
+#| label: setup
+library(ggplot2) 
+```
+
+## Consumer spending
+
+This is going to be a fairly open-ended lab (sorry!). The dataset you'll start out with is one we haven't used before: `justviz::spending`, which comes from the Census Bureau's Consumer Expenditure Survey. It's dense and in a tricky format, so read the docs for it. Not only is there an overview variable, `qtotal`, but also variables for 5 income quintiles. The categories are also hierarchical. All of this gives us a lot to explore and walk a reader through.
+
+First do some light EDA, jotting down questions about the data as you go. Start by getting to know the different categories. How many item types are in each top-level category (`l2`)? How do any of these categories fit into the total spending amount? What are the largest spending categories, and are they the same across income quintiles? (This will require some reshaping of the data.)
+
+With data like this, filtering for whether a column is NA will be your best friend, as will reshaping. For example, spending on all items:
+
+```{r}
+#| label: filter-all
+all_spending_by_quint <- justviz::spending |>
+    dplyr::filter(is.na(l2)) |>
+    # pivot all columns that start with q
+    tidyr::pivot_longer(dplyr::matches("^q"), names_to = "quintile", values_to = "value") |>
+    dplyr::mutate(quintile = forcats::as_factor(quintile))
+
+ggplot(all_spending_by_quint, aes(x = quintile, y = value)) +
+    geom_col()
+```
+
+Average spending on food at home:
+
+```{r}
+#| label: filter-l2
+avg_food_at_home <- justviz::spending |>
+    # l2 = food, l3 = food at home, specific food types come from l5 != NA
+    dplyr::filter(l3 == "Food at home", !is.na(l5)) |>
+        # order items by qtotal spending amount
+        dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) 
+
+ggplot(avg_food_at_home, aes(x = qtotal, y = item)) +
+    geom_col()
+```
+
+Each quintile's spending on different types of meat & eggs, where we'll show just subcategories of meat & eggs:
+
+```{r}
+#| label: filter-l4
+meat_types_by_quint <- justviz::spending |>
+    # l4 = meats, l5 != NA
+    dplyr::filter(l4 == "Meats, poultry, fish, and eggs", !is.na(l5)) |>
+    # order items by qtotal spending amount
+    dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) |>
+    # then reshape 
+    tidyr::pivot_longer(dplyr::matches("^q"), names_to = "quintile", values_to = "value") |>
+    dplyr::mutate(quintile = forcats::as_factor(quintile))
+
+ggplot(meat_types_by_quint, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set2") +
+    coord_cartesian(reverse = "y")
+```
+
+Once you've done some EDA, find something to explore in more detail and develop 1 or more charts that help your reader dig in. Jot down some questions that you think someone might want to explore about this data to guide you. Some techniques to try:
+
+* small multiples, repeating the same chart
+* facets to show different views of the data side by side or in a grid
+* zooming in on a focus area
+* multiple charts in a series
+
+## Revising a chart
+
+Now that you've practiced creating explorations for your reader, do the same with a chart of your own. If you're not sick of your midterm data, try one of the charts you made for your project; otherwise, revise a chart from a previous lab. Start with overview data---averages, higher geographies, larger groups---then zoom in in whatever way might be appropriate for the data. Use facets and/or multiple charts to do this, including different types of charts.
+
