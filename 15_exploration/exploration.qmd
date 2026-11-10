@@ -68,7 +68,183 @@ Once you've done some EDA, find something to explore in more detail and develop 
 * zooming in on a focus area
 * multiple charts in a series
 
+```{r}
+#EDA
+
+justviz::spending
+
+spend<-justviz::spending
+
+
+#entertainment
+
+entertain <- justviz::spending |>
+    # l2 = food, l3 = food at home, specific food types come from l5 != NA
+    dplyr::filter(l2 == "Entertainment", !is.na(l3)) |>
+        # order items by qtotal spending amount
+        dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) 
+
+ggplot(entertain, aes(x = qtotal, y = item)) +
+    geom_col()
+
+#not sure about some of this repitition in item names
+
+
+#healthcare - What is the biggest expense for health care? How does healtchare expense vary by quintile?
+
+health <- justviz::spending |>
+    dplyr::filter(l2 == "Healthcare", !is.na(l3)) |>
+        dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) 
+
+ggplot(health, aes(x = qtotal, y = item)) +
+    geom_col()
+
+#crzy that health insurance is WAY more than everything else, I think I will explore this
+
+health
+
+
+health_by_quint <- justviz::spending |>
+    dplyr::filter(l2 == "Healthcare", !is.na(l3)) |>
+    dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) |>
+    tidyr::pivot_longer(dplyr::matches("^q"), names_to = "quintile", values_to = "value") |>
+    dplyr::mutate(quintile = forcats::as_factor(quintile))
+
+ggplot(health_by_quint, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set2") +
+    coord_cartesian(reverse = "y")
+
+#q5 spends more on everything, interesting how much more is spent on med services than other quintiles - more money = more access
+
+
+
+# taking a look at breakdown not considering health insurance
+health_by_quint_noIn <- justviz::spending |>
+    dplyr::filter(l2 == "Healthcare", !is.na(l3)) |>
+    dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) |>
+    tidyr::pivot_longer(dplyr::matches("^q"), names_to = "quintile", values_to = "value") |>
+    dplyr::mutate(quintile = forcats::as_factor(quintile))|>
+    dplyr::filter(item!="Health insurance")
+
+ggplot(health_by_quint_noIn, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set2") +
+    coord_cartesian(reverse = "y")
+
+#q5 spends more medical services than all non-insurance expenditure in most lower quintiles
+
+#how does spending vary by quintile and spedning category?
+
+spend_types_by_quint <- justviz::spending |>
+    dplyr::filter(l2 %in% c("Food","Housing", "Healthcare","Transportation"), is.na(l3)) |>
+    dplyr::mutate(item = forcats::fct_reorder(item, qtotal)) |>
+    tidyr::pivot_longer(dplyr::matches("^q"), names_to = "quintile", values_to = "value") |>
+    dplyr::mutate(quintile = forcats::as_factor(quintile))
+
+
+spend_types_by_quint
+
+ggplot(spend_types_by_quint, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set2") +
+    coord_cartesian(reverse = "y")+
+  facet_wrap(~ item)
+
+#food,housing, healthcare,transportation
+```
+
+```{r}
+#charts
+
+
+ggplot(health, aes(x = qtotal, y = item)) +
+    geom_col()
+
+
+ggplot(health_by_quint, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set3") +
+    coord_cartesian(reverse = "y")
+
+
+ggplot(health_by_quint_noIn, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set3") +
+    coord_cartesian(reverse = "y")
+
+
+ggplot(spend_types_by_quint, aes(x = value, y = quintile, fill = item)) +
+    geom_col(position = position_stack()) +
+    scale_fill_brewer(palette = "Set3") +
+    coord_cartesian(reverse = "y")+
+  facet_wrap(~ item)
+```
+
+
 ## Revising a chart
 
 Now that you've practiced creating explorations for your reader, do the same with a chart of your own. If you're not sick of your midterm data, try one of the charts you made for your project; otherwise, revise a chart from a previous lab. Start with overview data---averages, higher geographies, larger groups---then zoom in in whatever way might be appropriate for the data. Use facets and/or multiple charts to do this, including different types of charts.
+
+```{r}
+library(ggplot2)
+library(sf)
+
+Low_Wint_Run <- st_read(
+  "../data/LowerWintersRun_StreamData_v3.shp")
+
+Low_Wint_Run_data <- Low_Wint_Run|>
+  dplyr::select(ID, SinuosityI, PhysProv,Slope, strOrder, Avg_WD)
+
+StreamData <- Low_Wint_Run_data |>
+  dplyr::filter(SinuosityI <= 200)
+
+StreamData$strOrder<-as.factor(StreamData$strOrder)
+
+#orignal chart
+ggplot(StreamData,aes(x=Slope/100,y=SinuosityI))+
+  geom_point(aes(colour=strOrder))+
+  geom_smooth(colour="blue")+
+  scale_colour_manual(values=rcartocolor::carto_pal(5,name ="SunsetDark"))+
+  labs(y="Sinuosity Index",x="Slope",title = "Slope, Sinuosity, and Stream Order in the Lower Winters Run Watershed, MD", colour="Stream Order",caption = "Data generated from 2025 Chesapeake watershed hyper-resolution hydrography and 1m DEM in ArcGIS Pro",subtitle = "Channel Slope = stream elevation change over horizontal length
+Stream Order = hierarchical position of stream segment in drainage network")+
+  scale_x_continuous(labels = scales::label_percent())+
+  theme_classic()+
+  theme(plot.subtitle = element_text(size = 10),plot.title = element_text(size=14, legend.title=element_text(size=6),axis.title=element_text(size = 9)))
+
+
+
+#faceted chart
+ggplot(StreamData, aes(x = Slope/100, y = SinuosityI)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth() +
+  facet_wrap(~ strOrder, scales="free_x")+
+  labs(y="Sinuosity Index",x="Slope",title = "Slope, Sinuosity, and Stream Order in the Lower Winters Run Watershed, MD", colour="Stream Order",caption = "Data generated from 2025 Chesapeake watershed hyper-resolution hydrography and 1m DEM in ArcGIS Pro",subtitle = "Channel Slope = stream elevation change over horizontal length
+Stream Order = hierarchical position of stream segment in drainage network")+
+  scale_x_continuous(labels = scales::label_percent())+
+  theme_classic()+
+  theme(plot.subtitle = element_text(size = 10),plot.title = element_text(size=14, legend.title=element_text(size=6),axis.title=element_text(size = 9)))
+
+
+
+
+ggplot(StreamData,aes(x=SinuosityI))+
+  geom_histogram()+
+  facet_wrap(~ strOrder, scales="free_x")
+
+ggplot(StreamData,aes(x=SinuosityI))+
+  geom_histogram()+
+  facet_wrap(~ PhysProv, scales="free_x")
+
+ggplot(StreamData,aes(x=Slope))+
+  geom_histogram()+
+  facet_wrap(~ strOrder, scales="free_x")
+
+ggplot(StreamData,aes(x=Slope))+
+  geom_histogram()+
+  facet_wrap(~ strOrder~PhysProv, scales="free_x")
+
+
+```
+
 

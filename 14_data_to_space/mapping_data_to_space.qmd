@@ -14,13 +14,51 @@ Let's make a choropleth! Pick any of the tract-level data we have available in j
 
 ```{r}
 #| label: choro-distiller 
- 
+
+justviz::climate
+
+tracts_climate_sf <- tigris::tracts(state = "MD", cb = TRUE,progress_bar=FALSE) |>
+  dplyr::select(geoid = GEOID, county = NAMELSADCO)|>
+  dplyr::filter(county %in% c("Anne Arundel","Baltimore city","Baltimore County","Howard County","Harford County","Carroll County"))|>
+  dplyr::inner_join(justviz::climate, by = "geoid")
+
+tracts_climate_sf
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf,linewidth=0.3,colour="grey15")+
+  aes(fill=flood_ss)+
+  scale_fill_distiller(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+#direction argument in distiller changes direction of scale (use =1 to reverse)
+
 ```
 
 Study the docs for `scale_fill_distiller` to understand the difference between the brewer, distiller, and fermenter variants (beyond the punny names). Try all three with your data---only 2 of them will work. Decide which you like best for this data. What tradeoffs do you find between legibility and precision?
 
 ```{r}
 #| label: choro-more-scales 
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf,linewidth=0.3,colour="grey15")+
+  aes(fill=flood_ss)+
+  scale_fill_distiller(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+#ggplot()+
+  #geom_sf(data = tracts_climate_sf,linewidth=0.3,colour="grey15")+
+  #aes(fill=flood_ss)+
+  #scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  #theme_minimal()
+#does not work: continuous value on discrete scale
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf,linewidth=0.3,colour="grey15")+
+  aes(fill=flood_ss)+
+  scale_fill_fermenter(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+#distiller smoothly interpolates between colors of scale to make a continuous scale, brewer best for discrete, fermenter is binned
  
 ```
 
@@ -42,10 +80,218 @@ Now before remaking your choropleth, cut the variable into bins using one of the
 
 ```{r}
 #| label: choro-binned
+
+tracts_climate_sf_bin<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(flood_ss, n = 5, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin2<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(flood_ss, n = 12, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin2,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+
+#trying variable with more unique values
+
+tracts_climate_sf_bin2<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 12, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin2,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin3<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 5, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin3,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin4<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 5, style = "jenks"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin4,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin5<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 9, style = "jenks"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin5,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin6<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 9, style = "equal"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin6,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+tracts_climate_sf_bin7<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 3, style = "equal"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin7,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin8<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 5, style = "kmeans"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin8,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin9<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(cvs_pctl, n = 5, style = "jenks"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin9,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+#this seems pretty good
  
 ```
 
 ## Do it all again
 
 Now that you've made a choropleth with a sequential fill, and found a binning algorithm that works well for the same data, try it all again with a different variable. Pick something with a different distribution---if the first variable was very skewed, try something closer to a normal or uniform distribution.
+
+```{r}
+
+tracts_climate_sf
+
+ggplot(tracts_climate_sf,aes(x=flood_ss))+
+  geom_histogram()
+
+ggplot(tracts_climate_sf,aes(x=cvs_pctl))+
+  geom_histogram()
+
+ggplot(tracts_climate_sf,aes(x=tcc))+
+  geom_histogram()
+#tcc is more normally distributed, cvs_pctl was skewed
+
+
+
+tracts_climate_sf_bin_tcc1<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 12, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc1,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+#need less bins
+
+
+tracts_climate_sf_bin_tcc2<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 9, style = "pretty"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc2,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin_tcc3<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 9, style = "jenks"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc3,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin_tcc4<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 9, style = "sd"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc4,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin_tcc5<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 5, style = "sd"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc5,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+tracts_climate_sf_bin_tcc6<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 9, style = "equal"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc6,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+
+#these 2 both look decent and are pretty similar
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc6,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc2,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+#I like this one best, equal interval seems good for normally dist data
+tracts_climate_sf_bin_tcc6<-tracts_climate_sf|>
+  dplyr::mutate(value_brk = classInt::classify_intervals(tcc, n = 9, style = "equal"))
+
+ggplot()+
+  geom_sf(data = tracts_climate_sf_bin_tcc6,linewidth=0.3,colour="grey15")+
+  aes(fill=value_brk)+
+  scale_fill_brewer(type="seq",palette = "PuBuGn", direction = 1)+
+  theme_minimal()
+
+
+
+```
 
