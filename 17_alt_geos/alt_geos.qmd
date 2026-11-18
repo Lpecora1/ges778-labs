@@ -1,0 +1,58 @@
+---
+title: Changing & manipulating geographies
+format: gfm
+---
+
+## Alternatives to the choropleth
+
+```{r}
+#| label: setup
+library(ggplot2)
+library(sf) 
+library(terra)
+
+tracts_sf <- tigris::tracts(state = "MD", cb = TRUE) |>
+    dplyr::select(tract = GEOID, county = NAMELSADCO)
+counties_sf <- tigris::counties(state = 'MD', cb = TRUE) |>
+    dplyr::select(county = NAMELSAD)
+```
+
+We're going to do some experiments. Start with basic choropleths. Use either the ACS data or CDC data so you can try the same techniques for both counties and tracts.
+
+```{r}
+#| label: basic-choro 
+
+```
+
+Now try some of the adjustments from the notes: get centroids and make bubble maps; try cartograms; scale opacity by some useful population measure. Do the techniques that work for the state's 24 counties work as well for all 1,464 tracts? What about for tracts within just one or two counties---at what point do things get too cluttered?
+
+## Simplifying points
+
+Obtain some point data in one of 3 ways: 
+
+* Use one of the point datasets from `justviz` (either `vacants_sf` or `art_sf`)
+* Download point data from OSM (look through the [wiki](https://wiki.openstreetmap.org/wiki/Map_features) for the feature type you want). Make sure it's something that will return points, such as bus stops or benches. The wiki table has an icon for features that return nodes.
+* Download point data from a local open data portal: 
+    - Baltimore city https://data.baltimorecity.gov
+    - Maryland GIS https://data.imap.maryland.gov/
+
+### Gridding
+
+Create a grid over the relevant area (the state, a county, etc) using `sf::st_make_grid`. Experiment with making a grid by the number of cells vs cells of a certain size. Then join your points to the grid and aggregate your points to the grid This might mean just taking the count of points in each grid cell, or something like averaging an attribute, depending on your data and what you want to do with it.
+
+Map your gridded data. Pay attention to color palettes that work well. If there are any other shapes you want to overlay, such as boundaries or related features, add those as new layers. Try this a few times, experimenting with different ways to structure the grid to see what gives you the best balance between granularity and legibility. (You could also try a hexagonal grid, or plot cells as points instead of polygons.)
+
+```{r}
+#| label: grids
+ 
+```
+
+### Densities
+
+Now take the same points and map their density. You can try the easy method (`geom_density_2d_filled` or its variants). Or, go ahead and use the proper method outlined in the notes with `spatstat`, first calculating a KDE, then converting it to a raster.
+
+```{r}
+#| label: densities
+ 
+```
+
