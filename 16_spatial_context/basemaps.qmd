@@ -1,0 +1,65 @@
+---
+title: Working with basemaps
+format: gfm
+---
+
+## Getting an API key
+
+Let's practice getting basemaps from a few different services and using them for mapping with ggplot. Since most services require an API key, sign up for 1 or 2. Depending on the service, you'll have a different route to getting your API key, but there should be documentation to help. Once you find your key, copy it and go back to RStudio/Positron.
+
+Now you'll want to safely store your key by writing it to an environment variable (envvar for short) in one of 2 ways: 
+
+* If you know where your `.Renviron` file is stored, open that in RStudio/Positron/another plain text editor
+* Otherwise, *in your console* (not this notebook), call `usethis::edit_r_environ()` to have the file opened for you (might need to install that package)
+
+Then you'll need to add a line to the file in the format `ENVIRONMENT_VARIABLE_NAME="value"`. Envvars are traditionally written in all caps, and you shouldn't put spaces around the equal sign. The `basemaps` package doesn't have standard envvar names it looks for, but name it something obvious like `MAPTILER_TOKEN`. If you sign up for multiple API keys, do this for each one on a new line. 
+
+Save the file, close it, and restart your R session so the envvars can be read into this session. Now if you type *in the console* `Sys.getenv("MAPTILER_TOKEN")` or whatever you called a variable, you should see your key *in the console*.
+
+## Getting a basemap
+
+
+```{r}
+#| label: setup
+library(ggplot2)
+library(sf)
+```
+
+Now that you have an API key for a maptiles service, it's time to get a basemap. First you need a bounding box. Start with a smaller area, like a single county (you can filter `justviz::tracts_sf` by county) or a buffer around a point (look back at lab 13). Once you have an `sf` object, transform it to Web Mercator (3857), get its bounding box with `sf::st_bbox`, and save it to a variable.
+
+```{r}
+#| label: bbox 
+ 
+```
+
+Use the `basemaps` package (might need to install it too) to find the names of services and their available basemap styles.
+
+```{r}
+#| label: basemap-options
+maptypes <- basemaps::get_maptypes()
+# names of available map services
+names(maptypes)
+
+# see what styles are available for your service
+maptypes[["maptiler"]]
+```
+
+Then grab the basemap and save it as a `terra` object. Fill in the `map_token` argument with `Sys.getenv("NAME_OF_YOUR_TOKEN_ENVVAR")`.
+
+```{r}
+#| label: fetch-basemap 
+basemap <- basemaps::basemap_terra() 
+
+ggplot() +
+    tidyterra::geom_spatraster_rgb(data = basemap)
+```
+
+## Data + basemap
+
+Now that you have a basemap, add some data on top of it. You can use the basemap as the background for a choropleth you've already done, or add point data, or whatever else you'd like. Unless the data you use happens to have the same bounding box as your basemap, you'll probably need to crop, filter, or in some other way subset the data to fit neatly. See examples in this week's notes.
+
+
+```{r}
+#| label: data-plus-basemap 
+ 
+```

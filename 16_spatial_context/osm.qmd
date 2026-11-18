@@ -1,0 +1,122 @@
+---
+title: OSM data
+format: gfm
+---
+
+We're going to make maps just using data from OpenStreetMap. Open up the list of keys and location types on their [wiki](https://wiki.openstreetmap.org/wiki/Map_features). 
+
+First get a bounding box like you did in the basemaps lab. You can also get a bounding box in the format for `osmdata` with `osmdata::getbb()`, which lets you search for a place by name, such as a town or neighborhood. 
+
+Keep in mind, the larger the area, the longer it takes to get back data and the more memory it takes up, so start small. OSM works in latlon coordinates, so you need to end up in a CRS like 4269 or 4326 before you get the bounding box.
+
+
+```{r}
+#| label: setup
+library(ggplot2)
+library(sf)
+
+```
+
+
+```{r}
+#| label: bbox 
+# do whatever you want to get an area to work with,
+# then get its bbox
+
+```
+
+
+## Getting OSM data
+
+All the keys and values on OSM are overwhelming, so just start with a few straightforward ones that you'll get the most use out of, things like highways and large roads, parks, water, and universities, depending on the area. These are also more stable than locations that might change type frequently when businesses open up or shut down. Fetch shapes for several different keys and values and store them as variables. If you get a 504 error, give it a minute and try again. If you're getting a lot of errors, save data into .rds files when you can get it to cut down on API calls.
+
+It's not abundantly clear from the docs, but you can use `osmdata::add_osm_feature` with a key but no value; for example, `key = "building"` will get all buildings regardless of type.
+
+
+```{r}
+#| label: get-osm-data
+# filter, change, or drop this however you want 
+# it's just to get you started with the larger road types
+roads <- osmdata::opq(bbox) |>
+    osmdata::add_osm_feature(
+        key = "highway",
+        value = c(
+            "motorway",
+            "trunk",
+            "primary",
+            "secondary",
+            "tertiary",
+            "motorway_link",
+            "trunk_link",
+            "primary_link",
+            "secondary_link",
+            "tertiary_link"
+        )
+    ) |>
+    osmdata::osmdata_sf()
+
+```
+
+Look at the structure and different geometry types of each object you get back (lines, polygons, points). Also think critically about what data makes sense for the location types---if you get data for roads, and one of the things returned is 25,000 points, those are probably the mess of nodes that make up the curves of the lines. There are probably tons of attributes in your data, and you likely need very few of them if any. You might need to do some clean up or change data types of some of the attributes to work with them---see the notes where I converted the number of lanes to numeric in order to draw roads with different widths. You also might need to do spatial operations like cropping.
+
+Here's a function I wrote to convert the type of bounding box returned by `osmdata::getbb` into a proper `sf` bounding box that you can use to filter or crop your shapes (for my map, I cropped things like roads that stretched outside the boundaries I wanted).
+
+```{r}
+#| label: bbox-converter
+osm_bb_to_sf_bb <- function(bb, crs = 4269) {
+    p1 <- c(bb["x", "min"], bb["y", "min"])
+    p2 <- c(bb["x", "max"], bb["y", "max"])
+    p1_sf <- sf::st_point(p1)
+    p2_sf <- sf::st_point(p2)
+    pts_sf <- sf::st_sfc(p1_sf, p2_sf, crs = crs)
+    sf::st_bbox(pts_sf)
+}
+```
+
+```{r}
+#| label: cleanup
+
+```
+
+After your data is ready, start building up your layers into a map.
+
+```{r}
+#| label: osm-map-1
+
+```
+
+```{r}
+#| label: osm-map-2
+
+```
+
+Once you have a decent map, make copies & adjust them to fit different purposes. How would you change the colors or anything else for a map going on a poster to show a location, vs one that will have data imposed on it, vs one that's made as art?
+
+## Adding context from OSM
+
+Revisit a choropleth you made previously, or make a new one. Get some data from OSM that would help provide context for that data, similar to the one in this week's notes with highways overlaid on the diesel emissions index. You might want something that will return paths (highways, bike lanes, crosswalks, streams), points (benches, bus stops), polygons (schools, parks), or some combination. (For example, it's common that a building will be a polygon but the business currently operating in that building is a point.) Find a way to combine your choropleth and your OSM data into a single map. Which layer should go on top? Pay attention to the opacity of each layer and to colors you use---if you draw parks with green polygons, you'll want a sequential palette in contrasting colors for your choropleth.
+
+```{r}
+#| label: data-plus-osm
+ 
+```
+
+## Asset mapping
+
+We (or at least I) make way too many maps of sad things. Make a map of nice things. Use the same bounding box as your first map, or try a new one. Using OSM data, make an asset map, which is a type of map that focuses on assets of an area. Feel free to add other locations you know about besides what's in OSM. What amenities does the area have to offer? What are its anchor institutions? What locations bring people together or provide resources?
+
+This works best with an area you're familiar with personally, because some of these assets simply won't be found in data created by outsiders. For example, a weird spot of broken curb won't be in any dataset but might be a skateboarder gathering spot; your local diner might look ordinary on paper/screen but is where everybody runs into each other after church.
+
+Use whatever you'd like to help orient your reader, such as basemaps, streets, or town/tract boundaries.
+
+
+```{r}
+#| label: asset-osm-data
+ 
+```
+
+
+```{r}
+#| label: asset-map 
+ 
+```
