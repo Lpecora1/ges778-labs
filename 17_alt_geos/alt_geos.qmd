@@ -22,9 +22,139 @@ We're going to do some experiments. Start with basic choropleths. Use either the
 ```{r}
 #| label: basic-choro 
 
+#need to join acs data to counties and tracts
+
+#counties
+acs_data<- justviz::acs|>
+  dplyr::filter(level == "county")
+
+acs_counties <- counties_sf |>
+  dplyr::inner_join(acs_data, by = c("county" = "name"))
+
+ggplot()+
+  geom_sf(data =acs_counties,aes(fill=diversity_idx))
+ggplot()+
+  geom_sf(data =acs_counties,aes(fill=black))
+ggplot()+
+  geom_sf(data =acs_counties,aes(fill=median_hh_income))
+ggplot()+
+  geom_sf(data =acs_counties,aes(fill=homeownership))
+
+#tracts
+acs_data2<- justviz::acs|>
+  dplyr::filter(level == "tract")
+
+acs_tracts <- tracts_sf |>
+  dplyr::inner_join(acs_data2, by = c("tract" = "name"))
+
+ggplot()+
+  geom_sf(data =acs_tracts,aes(fill=diversity_idx))
+ggplot()+
+  geom_sf(data =acs_tracts,aes(fill=black))
+ggplot()+
+  geom_sf(data =acs_tracts,aes(fill=median_hh_income))
+ggplot()+
+  geom_sf(data =acs_tracts,aes(fill=homeownership))
+  
+justviz::acs
 ```
 
 Now try some of the adjustments from the notes: get centroids and make bubble maps; try cartograms; scale opacity by some useful population measure. Do the techniques that work for the state's 24 counties work as well for all 1,464 tracts? What about for tracts within just one or two counties---at what point do things get too cluttered?
+
+```{r}
+# draw county boundaries, then draw points at their centroids
+
+#bubbles
+county_cents <- sf::st_centroid(acs_counties)
+
+ggplot(acs_counties) +
+    # layer for boundaries
+    geom_sf(color = "gray20", linewidth = 0.2) +
+    # layer for bubbles
+    geom_sf(
+        aes(size = median_hh_income),
+        data = county_cents,
+        alpha = 0.8,
+        color="red"
+    ) +
+    # make sure to scale by area, not radius
+    scale_size_area(
+        max_size = 10
+    ) +
+    labs(
+        title = "Median Household Income by MD County"
+    ) +
+    coord_sf(ndiscr = 0)
+
+
+ggplot(acs_counties) +
+    # layer for boundaries
+    geom_sf(color = "gray20", linewidth = 0.2) +
+    # layer for bubbles
+    geom_sf(
+        aes(size = diversity_idx),
+        data = county_cents,
+        alpha = 0.8,
+        color="red"
+    ) +
+    # make sure to scale by area, not radius
+    scale_size_area(
+        max_size = 10
+    ) +
+    labs(
+        title = "Diversity Index by MD County"
+    ) +
+    coord_sf(ndiscr = 0)
+
+tract_cents <- sf::st_centroid(acs_tracts)
+ggplot(acs_tracts) +
+    # layer for boundaries
+    geom_sf(color = "gray20", linewidth = 0.2) +
+    # layer for bubbles
+    geom_sf(
+        aes(size = diversity_idx),
+        data = tract_cents,
+        alpha = 0.8,
+        color="red"
+    ) +
+    # make sure to scale by area, not radius
+    scale_size_area(
+        max_size = 10
+    ) +
+    labs(
+        title = "Diversity Index by MD Tract"
+    ) +
+    coord_sf(ndiscr = 0)
+#way to crowded
+
+
+#cartogram
+acs_counties |>
+    sf::st_transform(3857) |>
+    cartogram::cartogram_cont(weight = "total_pop") |>
+    ggplot() +
+    geom_sf(aes(fill = foreign_born)) +
+    scale_fill_fermenter(palette = "RdPu", direction = 1) +
+    labs(
+        title = "% Foreign Born Population in MD Counties",
+        subtitle = "Shapes sized by total population"
+    ) +
+    coord_sf(ndiscr = 0)
+
+acs_tracts |>
+    sf::st_transform(3857) |>
+    cartogram::cartogram_cont(weight = "total_pop") |>
+    ggplot() +
+    geom_sf(aes(fill = foreign_born)) +
+    scale_fill_fermenter(palette = "RdPu", direction = 1) +
+    labs(
+        title = "% Foreign Born Population in MD Tracts",
+        subtitle = "Shapes sized by total population"
+    ) +
+    coord_sf(ndiscr = 0)
+```
+
+
 
 ## Simplifying points
 
@@ -35,6 +165,9 @@ Obtain some point data in one of 3 ways:
 * Download point data from a local open data portal: 
     - Baltimore city https://data.baltimorecity.gov
     - Maryland GIS https://data.imap.maryland.gov/
+```{r}
+vacants<-justviz::vacants_sf
+```
 
 ### Gridding
 
@@ -45,6 +178,82 @@ Map your gridded data. Pay attention to color palettes that work well. If there 
 ```{r}
 #| label: grids
  
+balt_to_grid <- counties_sf |>
+    dplyr::filter(county == "Baltimore city") |>
+    sf::st_geometry() |>
+    sf::st_transform(2248)
+
+# for each grid, transform back to 4269 & make an sf data frame
+# filter for only cells that intersect with city
+# then give unique ID to each cell to aggregate
+# supply n to set number of cells in each direction
+balt_grid_20x20 <- balt_to_grid |>
+    sf::st_make_grid(n = 20) |>
+    sf::st_as_sf() |>
+    sf::st_filter(balt_to_grid) |>
+    sf::st_transform(4269) |>
+    tibble::rowid_to_column("id")
+
+# supply cellsize to set length of cells
+balt_grid_05_mi <- balt_to_grid |>
+    sf::st_make_grid(cellsize = 5280 / 2) |>
+    sf::st_as_sf() |>
+    sf::st_filter(balt_to_grid) |>
+    sf::st_transform(4269) |>
+    tibble::rowid_to_column("id")
+
+balt_grid_20x20 |>
+    sf::st_join(justviz::vacants_sf) |>
+    dplyr::group_by(id) |>
+    dplyr::summarise(n_vacants = dplyr::n()) |>
+    ggplot() +
+    geom_sf(aes(fill = n_vacants), color = "gray20", linewidth = 0.1) +
+    geom_sf(data = balt_to_grid, fill = NA, color = "black") +
+    scale_fill_fermenter(palette = "RdPu", direction = 1) +
+    coord_sf(ndiscr = 0) +
+    labs(
+        title = "Count of vacants, aggregated to 400-cell grid, Baltimore city"
+    )
+
+
+
+
+balt_to_grid <- counties_sf |>
+    dplyr::filter(county == "Baltimore city") |>
+    sf::st_geometry() |>
+    sf::st_transform(2248)
+
+# for each grid, transform back to 4269 & make an sf data frame
+# filter for only cells that intersect with city
+# then give unique ID to each cell to aggregate
+# supply n to set number of cells in each direction
+balt_grid_50x50 <- balt_to_grid |>
+    sf::st_make_grid(n = 50) |>
+    sf::st_as_sf() |>
+    sf::st_filter(balt_to_grid) |>
+    sf::st_transform(4269) |>
+    tibble::rowid_to_column("id")
+
+# supply cellsize to set length of cells
+balt_grid_025_mi <- balt_to_grid |>
+    sf::st_make_grid(cellsize = 5280 / 4) |>
+    sf::st_as_sf() |>
+    sf::st_filter(balt_to_grid) |>
+    sf::st_transform(4269) |>
+    tibble::rowid_to_column("id")
+
+balt_grid_50x50 |>
+    sf::st_join(justviz::vacants_sf) |>
+    dplyr::group_by(id) |>
+    dplyr::summarise(n_vacants = dplyr::n()) |>
+    ggplot() +
+    geom_sf(aes(fill = n_vacants), color = "gray20", linewidth = 0.1) +
+    geom_sf(data = balt_to_grid, fill = NA, color = "black") +
+    scale_fill_fermenter(palette = "RdPu", direction = 1) +
+    coord_sf(ndiscr = 0) +
+    labs(
+        title = "Count of vacants, aggregated to 2500-cell grid, Baltimore city"
+    )
 ```
 
 ### Densities
@@ -53,6 +262,23 @@ Now take the same points and map their density. You can try the easy method (`ge
 
 ```{r}
 #| label: densities
+
+# naive way with geom_density_2d:
+# extract matrix of point coordinates, drop geometry column
+# expand matrix out into 2 proper columns
+vacants_xy <- justviz::vacants_sf |>
+    sf::st_transform(2248) |>
+    dplyr::mutate(coords = sf::st_coordinates(geometry)) |>
+    sf::st_drop_geometry() |>
+    dplyr::mutate(x = coords[, "X"], y = coords[, "Y"])
+
+ggplot(vacants_xy) +
+    geom_density_2d_filled(aes(x = x, y = y)) +
+    geom_sf(data = balt_to_grid, fill = NA, color = "black") +
+    scale_fill_brewer(palette = "RdPu", direction = 1) +
+    coord_sf(ndiscr = 0) +
+    labs(title = "Density of vacants")
+
  
 ```
 
